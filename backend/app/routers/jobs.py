@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.application import Application
 from app.models.job import Job
 from app.schemas.job import JobCreate, JobRead, JobUpdate
 
@@ -32,6 +33,8 @@ def create_job(
     """Validate and persist a job in the configured database."""
     job_record = Job(**job.model_dump(mode="json"))
     db.add(job_record)
+    db.flush()
+    db.add(Application(job_id=job_record.id, status="saved"))
     db.commit()
     db.refresh(job_record)
     return job_record

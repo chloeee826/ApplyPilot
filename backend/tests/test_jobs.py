@@ -8,6 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
+from app.models.application import Application
 from app.models.job import Job
 
 
@@ -41,12 +42,14 @@ def client():
 @pytest.fixture(autouse=True)
 def clear_jobs():
     with TestSessionLocal() as session:
+        session.execute(delete(Application))
         session.execute(delete(Job))
         session.commit()
 
     yield
 
     with TestSessionLocal() as session:
+        session.execute(delete(Application))
         session.execute(delete(Job))
         session.commit()
 
@@ -76,10 +79,15 @@ def test_create_job(client: TestClient) -> None:
 
     with Session(test_engine) as session:
         saved_job = session.scalar(select(Job).where(Job.id == UUID(body["id"])))
+        saved_application = session.scalar(
+            select(Application).where(Application.job_id == UUID(body["id"]))
+        )
 
     assert saved_job is not None
     assert saved_job.company_name == "Example Company"
     assert saved_job.title == "Software Engineer"
+    assert saved_application is not None
+    assert saved_application.status == "saved"
 
 
 def test_create_job_rejects_missing_required_field(client: TestClient) -> None:

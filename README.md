@@ -16,11 +16,15 @@ The repository currently contains a tested full-stack foundation with:
 - a React and TypeScript frontend;
 - a frontend health-check action backed by React state;
 - a responsive job creation form and PostgreSQL-backed job list;
+- automatic application creation when a job is saved;
+- a validated application pipeline with saved, applied, interviewing, offer,
+  rejected, and withdrawn statuses;
+- persistent application status updates from the React workspace;
 - a Vite development proxy connecting the frontend to FastAPI;
 - pinned backend and frontend dependencies.
 
-Application status management, the job form, candidate profiles, job description
-analysis, and AI agent features are planned but are not implemented yet.
+Candidate profiles, job description analysis, and AI agent features are planned
+but are not implemented yet.
 
 ## Run the backend
 
@@ -53,8 +57,8 @@ npm run dev
 ```
 
 The frontend is then available at `http://127.0.0.1:5173`. During local
-development, Vite proxies `/health` requests to the FastAPI server on port
-`8000`.
+development, Vite proxies `/health`, `/jobs`, and `/applications` requests to
+the FastAPI server on port `8000`.
 
 ## Run the tests
 

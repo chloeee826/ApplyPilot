@@ -1,8 +1,19 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
+import { listApplications, updateApplication } from './api/applications'
 import { createJob, listJobs } from './api/jobs'
 import './App.css'
+import type { Application, ApplicationStatus } from './types/application'
 import type { Job, JobCreate } from './types/job'
+
+const applicationStatuses: ApplicationStatus[] = [
+  'saved',
+  'applied',
+  'interviewing',
+  'offer',
+  'rejected',
+  'withdrawn',
+]
 
 const emptyForm: JobCreate = {
   company_name: '',
@@ -16,17 +27,27 @@ function App() {
   const [backendStatus, setBackendStatus] = useState('Not checked')
   const [form, setForm] = useState<JobCreate>(emptyForm)
   const [jobs, setJobs] = useState<Job[]>([])
+  const [applications, setApplications] = useState<Application[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(
+    null,
+  )
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
-    async function loadJobs() {
+    async function loadWorkspace() {
       try {
-        const savedJobs = await listJobs()
-        if (!cancelled) setJobs(savedJobs)
+        const [savedJobs, savedApplications] = await Promise.all([
+          listJobs(),
+          listApplications(),
+        ])
+        if (!cancelled) {
+          setJobs(savedJobs)
+          setApplications(savedApplications)
+        }
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError instanceof Error ? loadError.message : 'Could not load jobs')
@@ -36,7 +57,7 @@ function App() {
       }
     }
 
-    void loadJobs()
+    void loadWorkspace()
     return () => {
       cancelled = true
     }
@@ -62,7 +83,9 @@ function App() {
 
     try {
       const savedJob = await createJob(payload)
+      const savedApplications = await listApplications()
       setJobs((current) => [savedJob, ...current])
+      setApplications(savedApplications)
       setForm(emptyForm)
     } catch (submitError) {
       setError(
@@ -70,6 +93,31 @@ function App() {
       )
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function handleStatusChange(
+    applicationId: string,
+    status: ApplicationStatus,
+  ) {
+    setUpdatingApplicationId(applicationId)
+    setError(null)
+
+    try {
+      const updatedApplication = await updateApplication(applicationId, status)
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === updatedApplication.id ? updatedApplication : application,
+        ),
+      )
+    } catch (updateError) {
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : 'Could not update application status',
+      )
+    } finally {
+      setUpdatingApplicationId(null)
     }
   }
 
@@ -192,27 +240,54 @@ function App() {
           )}
 
           <div className="job-list">
-            {jobs.map((job) => (
-              <article className="job-card" key={job.id}>
-                <div className="job-card-topline">
-                  <span>{job.company_name}</span>
-                  <time dateTime={job.created_at}>
-                    {new Intl.DateTimeFormat('en', {
-                      month: 'short',
-                      day: 'numeric',
-                    }).format(new Date(job.created_at))}
-                  </time>
-                </div>
-                <h3>{job.title}</h3>
-                <p>{job.location || 'Location not specified'}</p>
-                <p className="job-description">{job.description}</p>
-                {job.source_url && (
-                  <a href={job.source_url} target="_blank" rel="noreferrer">
-                    View original posting ↗
-                  </a>
-                )}
-              </article>
-            ))}
+            {jobs.map((job) => {
+              const application = applications.find(
+                (candidate) => candidate.job_id === job.id,
+              )
+
+              return (
+                <article className="job-card" key={job.id}>
+                  <div className="job-card-topline">
+                    <span>{job.company_name}</span>
+                    <time dateTime={job.created_at}>
+                      {new Intl.DateTimeFormat('en', {
+                        month: 'short',
+                        day: 'numeric',
+                      }).format(new Date(job.created_at))}
+                    </time>
+                  </div>
+                  <h3>{job.title}</h3>
+                  <p>{job.location || 'Location not specified'}</p>
+                  {application && (
+                    <label className="status-field">
+                      Application status
+                      <select
+                        value={application.status}
+                        disabled={updatingApplicationId === application.id}
+                        onChange={(event) =>
+                          void handleStatusChange(
+                            application.id,
+                            event.target.value as ApplicationStatus,
+                          )
+                        }
+                      >
+                        {applicationStatuses.map((status) => (
+                          <option key={status} value={status}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <p className="job-description">{job.description}</p>
+                  {job.source_url && (
+                    <a href={job.source_url} target="_blank" rel="noreferrer">
+                      View original posting ↗
+                    </a>
+                  )}
+                </article>
+              )
+            })}
           </div>
         </section>
       </section>

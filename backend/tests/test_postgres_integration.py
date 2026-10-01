@@ -3,9 +3,11 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.database import SessionLocal
 from app.main import app
+from app.models.application import Application
 from app.models.job import Job
 
 
@@ -42,11 +44,32 @@ def test_create_job_persists_in_postgres() -> None:
         assert update_response.status_code == 200
         assert update_response.json()["title"] == "Senior Backend Engineer"
 
+        applications_response = client.get("/applications")
+        assert applications_response.status_code == 200
+        application = next(
+            item
+            for item in applications_response.json()
+            if item["job_id"] == str(job_id)
+        )
+        assert application["status"] == "saved"
+
+        status_response = client.patch(
+            f"/applications/{application['id']}",
+            json={"status": "interviewing"},
+        )
+        assert status_response.status_code == 200
+        assert status_response.json()["status"] == "interviewing"
+
     with SessionLocal() as session:
         saved_job = session.get(Job, job_id)
         assert saved_job is not None
         assert saved_job.company_name == "PostgreSQL Integration Test"
         assert saved_job.title == "Senior Backend Engineer"
+        saved_application = session.scalar(
+            select(Application).where(Application.job_id == job_id)
+        )
+        assert saved_application is not None
+        assert saved_application.status == "interviewing"
 
         session.delete(saved_job)
         session.commit()

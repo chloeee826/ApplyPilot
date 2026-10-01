@@ -61,7 +61,8 @@ h2 {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -150,7 +151,8 @@ label span {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   border: 1px solid var(--blue);
   border-radius: 9px;
@@ -173,7 +175,8 @@ textarea {
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   border-color: var(--blue-deep);
   box-shadow: 0 0 0 3px rgba(142, 172, 205, 0.3);
 }
@@ -268,6 +271,36 @@ textarea:focus {
   color: var(--ink);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
+}
+
+.status-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--sage);
+  font-size: 0.78rem;
+}
+
+.status-field select {
+  width: auto;
+  min-width: 132px;
+  height: 36px;
+  padding: 0 30px 0 10px;
+  border: 1px solid var(--blue-deep);
+  border-radius: 7px;
+  color: var(--ink);
+  background: var(--surface);
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-field select:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .job-card a {
