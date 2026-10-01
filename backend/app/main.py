@@ -1,9 +1,21 @@
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
+
 from fastapi import FastAPI
 
+from app.database import create_db_and_tables
+from app import models  # noqa: F401 -- registers database models with SQLAlchemy
 from app.routers.jobs import router as jobs_router
 
 
-app = FastAPI(title="ApplyPilot API")
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Initialize database tables when the API starts."""
+    create_db_and_tables()
+    yield
+
+
+app = FastAPI(title="ApplyPilot API", lifespan=lifespan)
 app.include_router(jobs_router)
 
 

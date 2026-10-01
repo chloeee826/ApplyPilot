@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 class JobCreate(BaseModel):
@@ -16,6 +16,8 @@ class JobCreate(BaseModel):
 
 class JobRead(JobCreate):
     """A created job returned by the API."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     created_at: datetime
