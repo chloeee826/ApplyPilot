@@ -10,6 +10,7 @@ The repository currently contains a tested full-stack foundation with:
 
 - a FastAPI `GET /health` liveness endpoint;
 - a validated `POST /jobs` endpoint;
+- paginated job listing, detail retrieval, and partial updates;
 - SQLAlchemy job persistence in PostgreSQL;
 - isolated unit tests and an opt-in PostgreSQL integration test;
 - a React and TypeScript frontend;
@@ -17,9 +18,8 @@ The repository currently contains a tested full-stack foundation with:
 - a Vite development proxy connecting the frontend to FastAPI;
 - pinned backend and frontend dependencies.
 
-Job listing and status management, the job form, candidate profiles, job
-description analysis, and AI agent features are planned but are not implemented
-yet.
+Application status management, the job form, candidate profiles, job description
+analysis, and AI agent features are planned but are not implemented yet.
 
 ## Run the backend
 
