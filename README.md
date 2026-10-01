@@ -15,6 +15,7 @@ The repository currently contains a tested full-stack foundation with:
 - isolated unit tests and an opt-in PostgreSQL integration test;
 - a React and TypeScript frontend;
 - a frontend health-check action backed by React state;
+- a responsive job creation form and PostgreSQL-backed job list;
 - a Vite development proxy connecting the frontend to FastAPI;
 - pinned backend and frontend dependencies.
 
