@@ -1,11 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
 import { listApplications, updateApplication } from './api/applications'
+import { analyzeJob, listJobAnalyses } from './api/jobAnalyses'
 import { createJob, listJobs } from './api/jobs'
 import './App.css'
 import { CandidateProfilePanel } from './components/CandidateProfilePanel'
 import type { Application, ApplicationStatus } from './types/application'
 import type { Job, JobCreate } from './types/job'
+import type { JobAnalysis } from './types/jobAnalysis'
 
 const applicationStatuses: ApplicationStatus[] = [
   'saved',
@@ -29,11 +31,13 @@ function App() {
   const [form, setForm] = useState<JobCreate>(emptyForm)
   const [jobs, setJobs] = useState<Job[]>([])
   const [applications, setApplications] = useState<Application[]>([])
+  const [analyses, setAnalyses] = useState<JobAnalysis[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(
     null,
   )
+  const [analyzingJobId, setAnalyzingJobId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -41,13 +45,15 @@ function App() {
 
     async function loadWorkspace() {
       try {
-        const [savedJobs, savedApplications] = await Promise.all([
+        const [savedJobs, savedApplications, savedAnalyses] = await Promise.all([
           listJobs(),
           listApplications(),
+          listJobAnalyses(),
         ])
         if (!cancelled) {
           setJobs(savedJobs)
           setApplications(savedApplications)
+          setAnalyses(savedAnalyses)
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -66,6 +72,33 @@ function App() {
 
   function updateField(field: keyof JobCreate, value: string) {
     setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  async function handleAnalyzeJob(jobId: string) {
+    setAnalyzingJobId(jobId)
+    setError(null)
+
+    try {
+      const savedAnalysis = await analyzeJob(jobId)
+      setAnalyses((current) => {
+        const alreadyExists = current.some(
+          (analysis) => analysis.id === savedAnalysis.id,
+        )
+        return alreadyExists
+          ? current.map((analysis) =>
+              analysis.id === savedAnalysis.id ? savedAnalysis : analysis,
+            )
+          : [savedAnalysis, ...current]
+      })
+    } catch (analysisError) {
+      setError(
+        analysisError instanceof Error
+          ? analysisError.message
+          : 'Could not analyze job description',
+      )
+    } finally {
+      setAnalyzingJobId(null)
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -245,6 +278,7 @@ function App() {
               const application = applications.find(
                 (candidate) => candidate.job_id === job.id,
               )
+              const analysis = analyses.find((candidate) => candidate.job_id === job.id)
 
               return (
                 <article className="job-card" key={job.id}>
@@ -281,6 +315,61 @@ function App() {
                     </label>
                   )}
                   <p className="job-description">{job.description}</p>
+                  <button
+                    className="analysis-button"
+                    type="button"
+                    disabled={analyzingJobId === job.id}
+                    onClick={() => void handleAnalyzeJob(job.id)}
+                  >
+                    {analyzingJobId === job.id
+                      ? 'Analyzing…'
+                      : analysis
+                        ? 'Refresh analysis'
+                        : 'Analyze description'}
+                  </button>
+                  {analysis && (
+                    <section className="analysis-panel" aria-label="Job analysis">
+                      <div className="analysis-heading">
+                        <h4>Structured analysis</h4>
+                        <span>{analysis.parser_version}</span>
+                      </div>
+                      <div className="tag-list" aria-label="Extracted skills">
+                        {analysis.skills.map((skill) => (
+                          <span key={skill}>{skill}</span>
+                        ))}
+                      </div>
+                      {analysis.requirements.length > 0 && (
+                        <div className="analysis-group">
+                          <h5>Requirements</h5>
+                          <ul>
+                            {analysis.requirements.map((requirement) => (
+                              <li key={requirement}>{requirement}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {analysis.preferred_qualifications.length > 0 && (
+                        <div className="analysis-group">
+                          <h5>Preferred</h5>
+                          <ul>
+                            {analysis.preferred_qualifications.map((qualification) => (
+                              <li key={qualification}>{qualification}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {analysis.responsibilities.length > 0 && (
+                        <div className="analysis-group">
+                          <h5>Responsibilities</h5>
+                          <ul>
+                            {analysis.responsibilities.map((responsibility) => (
+                              <li key={responsibility}>{responsibility}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </section>
+                  )}
                   {job.source_url && (
                     <a href={job.source_url} target="_blank" rel="noreferrer">
                       View original posting ↗

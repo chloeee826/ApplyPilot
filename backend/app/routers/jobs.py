@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.application import Application
 from app.models.job import Job
+from app.models.job_analysis import JobAnalysis
 from app.schemas.job import JobCreate, JobRead, JobUpdate
 
 
@@ -74,10 +75,18 @@ def update_job(
     """Apply only the fields supplied by the client."""
     job = get_job_or_404(db, job_id)
 
-    for field_name, value in updates.model_dump(
+    update_values = updates.model_dump(
         exclude_unset=True,
         mode="json",
-    ).items():
+    )
+    if "description" in update_values and update_values["description"] != job.description:
+        analysis = db.scalar(
+            select(JobAnalysis).where(JobAnalysis.job_id == job_id)
+        )
+        if analysis is not None:
+            db.delete(analysis)
+
+    for field_name, value in update_values.items():
         setattr(job, field_name, value)
 
     db.commit()

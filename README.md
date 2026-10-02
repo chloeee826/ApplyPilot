@@ -23,11 +23,16 @@ The repository currently contains a tested full-stack foundation with:
 - PostgreSQL-backed candidate profiles with structured skill lists;
 - project evidence records with technologies and concrete highlights;
 - a React candidate workspace for creating and reloading profile evidence;
+- a versioned rule-based job-description parser that extracts skills,
+  requirements, preferred qualifications, and responsibilities;
+- persistent structured job analyses with automatic invalidation when a job
+  description changes;
+- frontend controls for creating, refreshing, and reviewing job analyses;
 - a Vite development proxy connecting the frontend to FastAPI;
 - pinned backend and frontend dependencies.
 
-Job description analysis and AI agent features are planned but are not
-implemented yet.
+LLM structured outputs, agent tool calling, and persistent agent runs are
+planned but are not implemented yet.
 
 ## Run the backend
 
@@ -60,8 +65,8 @@ npm run dev
 ```
 
 The frontend is then available at `http://127.0.0.1:5173`. During local
-development, Vite proxies `/health`, `/jobs`, `/applications`, and `/profiles`
-requests to the FastAPI server on port `8000`.
+development, Vite proxies `/health`, `/jobs`, `/job-analyses`, `/applications`,
+and `/profiles` requests to the FastAPI server on port `8000`.
 
 ## Run the tests
 

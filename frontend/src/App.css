@@ -312,6 +312,85 @@ select:focus {
   text-decoration: none;
 }
 
+.analysis-button {
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--blue-deep);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--blue-soft);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.analysis-button:hover:not(:disabled) {
+  background: var(--blue);
+}
+
+.analysis-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.analysis-panel {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--blue);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.analysis-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.analysis-heading h4,
+.analysis-group h5 {
+  margin: 0;
+  color: var(--ink);
+}
+
+.analysis-heading h4 {
+  font-size: 0.9rem;
+}
+
+.analysis-heading > span {
+  color: var(--blue-deep);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.analysis-group {
+  margin-top: 16px;
+}
+
+.analysis-group h5 {
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.analysis-group ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.analysis-group li {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.analysis-group li + li {
+  margin-top: 5px;
+}
+
 .empty-state {
   padding: 44px 22px;
   border: 1px dashed var(--blue);

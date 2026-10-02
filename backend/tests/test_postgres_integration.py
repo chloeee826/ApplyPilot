@@ -10,6 +10,7 @@ from app.main import app
 from app.models.application import Application
 from app.models.candidate import CandidateProfile, CandidateProject
 from app.models.job import Job
+from app.models.job_analysis import JobAnalysis
 
 
 @pytest.mark.integration
@@ -24,7 +25,7 @@ def test_create_job_persists_in_postgres() -> None:
             json={
                 "company_name": "PostgreSQL Integration Test",
                 "title": "Backend Engineer",
-                "description": "Verify that the API persists this job.",
+                "description": "Build PostgreSQL-backed APIs and verify persistence.",
             },
         )
 
@@ -60,6 +61,11 @@ def test_create_job_persists_in_postgres() -> None:
         )
         assert status_response.status_code == 200
         assert status_response.json()["status"] == "interviewing"
+
+        analysis_response = client.post(f"/job-analyses/{job_id}")
+        assert analysis_response.status_code == 200
+        assert analysis_response.json()["parser_version"] == "rules-v1"
+        assert "PostgreSQL" in analysis_response.json()["skills"]
 
         profile_response = client.post(
             "/profiles",
@@ -99,6 +105,11 @@ def test_create_job_persists_in_postgres() -> None:
         )
         assert saved_application is not None
         assert saved_application.status == "interviewing"
+        saved_analysis = session.scalar(
+            select(JobAnalysis).where(JobAnalysis.job_id == job_id)
+        )
+        assert saved_analysis is not None
+        assert saved_analysis.parser_version == "rules-v1"
         saved_profile = session.get(CandidateProfile, profile_id)
         saved_project = session.get(CandidateProject, project_id)
         assert saved_profile is not None
