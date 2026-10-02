@@ -9,6 +9,7 @@ export default defineConfig({
       '/health': 'http://127.0.0.1:8000',
       '/jobs': 'http://127.0.0.1:8000',
       '/applications': 'http://127.0.0.1:8000',
+      '/profiles': 'http://127.0.0.1:8000',
     },
   },
 })

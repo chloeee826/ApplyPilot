@@ -7,6 +7,7 @@ from app.database import create_db_and_tables
 from app import models  # noqa: F401 -- registers database models with SQLAlchemy
 from app.routers.applications import router as applications_router
 from app.routers.jobs import router as jobs_router
+from app.routers.profiles import router as profiles_router
 
 
 @asynccontextmanager
@@ -19,6 +20,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="ApplyPilot API", lifespan=lifespan)
 app.include_router(jobs_router)
 app.include_router(applications_router)
+app.include_router(profiles_router)
 
 
 @app.get("/health")

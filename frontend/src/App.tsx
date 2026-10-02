@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { listApplications, updateApplication } from './api/applications'
 import { createJob, listJobs } from './api/jobs'
 import './App.css'
+import { CandidateProfilePanel } from './components/CandidateProfilePanel'
 import type { Application, ApplicationStatus } from './types/application'
 import type { Job, JobCreate } from './types/job'
 
@@ -291,6 +292,8 @@ function App() {
           </div>
         </section>
       </section>
+
+      <CandidateProfilePanel />
     </main>
   )
 }

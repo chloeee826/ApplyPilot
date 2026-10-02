@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.database import SessionLocal
 from app.main import app
 from app.models.application import Application
+from app.models.candidate import CandidateProfile, CandidateProject
 from app.models.job import Job
 
 
@@ -60,6 +61,34 @@ def test_create_job_persists_in_postgres() -> None:
         assert status_response.status_code == 200
         assert status_response.json()["status"] == "interviewing"
 
+        profile_response = client.post(
+            "/profiles",
+            json={
+                "full_name": "PostgreSQL Test Candidate",
+                "headline": "Backend Engineer",
+                "summary": "Tests real persistence boundaries.",
+                "skills": ["Python", "PostgreSQL"],
+            },
+        )
+        assert profile_response.status_code == 201
+        profile_id = UUID(profile_response.json()["id"])
+
+        project_response = client.post(
+            f"/profiles/{profile_id}/projects",
+            json={
+                "name": "ApplyPilot Integration Test",
+                "description": "Verifies project evidence persistence.",
+                "technologies": ["FastAPI", "SQLAlchemy"],
+                "highlights": ["Persisted structured evidence in PostgreSQL."],
+            },
+        )
+        assert project_response.status_code == 201
+        project_id = UUID(project_response.json()["id"])
+
+        projects_response = client.get(f"/profiles/{profile_id}/projects")
+        assert projects_response.status_code == 200
+        assert projects_response.json()[0]["id"] == str(project_id)
+
     with SessionLocal() as session:
         saved_job = session.get(Job, job_id)
         assert saved_job is not None
@@ -70,6 +99,15 @@ def test_create_job_persists_in_postgres() -> None:
         )
         assert saved_application is not None
         assert saved_application.status == "interviewing"
+        saved_profile = session.get(CandidateProfile, profile_id)
+        saved_project = session.get(CandidateProject, project_id)
+        assert saved_profile is not None
+        assert saved_profile.skills == ["Python", "PostgreSQL"]
+        assert saved_project is not None
+        assert saved_project.highlights == [
+            "Persisted structured evidence in PostgreSQL."
+        ]
 
         session.delete(saved_job)
+        session.delete(saved_profile)
         session.commit()
