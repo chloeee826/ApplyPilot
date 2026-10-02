@@ -9,7 +9,7 @@ from app.database import get_db
 from app.models.job import Job
 from app.models.job_analysis import JobAnalysis
 from app.schemas.job_analysis import JobAnalysisRead
-from app.services.job_parser import PARSER_VERSION, parse_job_description
+from app.services.llm_job_parser import parse_job_description_with_fallback
 
 
 router = APIRouter(prefix="/job-analyses", tags=["job analyses"])
@@ -61,13 +61,13 @@ def analyze_job(
     db: Annotated[Session, Depends(get_db)],
 ) -> JobAnalysis:
     job = get_job_or_404(db, job_id)
-    parsed = parse_job_description(job.description)
+    parsed, parser_version = parse_job_description_with_fallback(job.description)
     values = {
         "skills": parsed.skills,
         "requirements": parsed.requirements,
         "preferred_qualifications": parsed.preferred_qualifications,
         "responsibilities": parsed.responsibilities,
-        "parser_version": PARSER_VERSION,
+        "parser_version": parser_version,
     }
 
     analysis = db.scalar(select(JobAnalysis).where(JobAnalysis.job_id == job_id))

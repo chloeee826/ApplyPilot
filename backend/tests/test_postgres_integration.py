@@ -7,10 +7,38 @@ from sqlalchemy import select
 
 from app.database import SessionLocal
 from app.main import app
+from app.models.agent_run import AgentRun
 from app.models.application import Application
 from app.models.candidate import CandidateProfile, CandidateProject
 from app.models.job import Job
 from app.models.job_analysis import JobAnalysis
+from app.routers.agent_runs import get_agent_runner
+from app.services.job_match_agent import AgentResult, JobMatchRecommendation
+
+
+def postgres_test_agent_runner(
+    db: object,
+    job_id: UUID,
+    profile_id: UUID,
+) -> AgentResult:
+    return AgentResult(
+        recommendation=JobMatchRecommendation(
+            summary="Stored PostgreSQL evidence supports this candidate.",
+            matched_skills=["PostgreSQL"],
+            skill_gaps=["AWS"],
+            project_evidence=["ApplyPilot persists structured evidence."],
+            interview_focus=["Explain the persistence boundary."],
+        ),
+        tool_trace=[
+            {
+                "name": "get_job_analysis",
+                "call_id": "postgres-call",
+                "arguments": {},
+                "output": {"skills": ["PostgreSQL"]},
+            }
+        ],
+        model="postgres-test-model",
+    )
 
 
 @pytest.mark.integration
@@ -19,6 +47,7 @@ from app.models.job_analysis import JobAnalysis
     reason="Set RUN_POSTGRES_TESTS=1 to test the configured PostgreSQL database.",
 )
 def test_create_job_persists_in_postgres() -> None:
+    app.dependency_overrides[get_agent_runner] = lambda: postgres_test_agent_runner
     with TestClient(app) as client:
         create_response = client.post(
             "/jobs",
@@ -95,6 +124,17 @@ def test_create_job_persists_in_postgres() -> None:
         assert projects_response.status_code == 200
         assert projects_response.json()[0]["id"] == str(project_id)
 
+        agent_response = client.post(
+            "/agent-runs",
+            json={"job_id": str(job_id), "profile_id": str(profile_id)},
+        )
+        assert agent_response.status_code == 201
+        agent_run_id = UUID(agent_response.json()["id"])
+        assert agent_response.json()["status"] == "completed"
+        assert agent_response.json()["tool_trace"][0]["name"] == "get_job_analysis"
+
+    app.dependency_overrides.pop(get_agent_runner, None)
+
     with SessionLocal() as session:
         saved_job = session.get(Job, job_id)
         assert saved_job is not None
@@ -118,6 +158,10 @@ def test_create_job_persists_in_postgres() -> None:
         assert saved_project.highlights == [
             "Persisted structured evidence in PostgreSQL."
         ]
+        saved_agent_run = session.get(AgentRun, agent_run_id)
+        assert saved_agent_run is not None
+        assert saved_agent_run.model == "postgres-test-model"
+        assert saved_agent_run.matched_skills == ["PostgreSQL"]
 
         session.delete(saved_job)
         session.delete(saved_profile)

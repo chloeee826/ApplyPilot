@@ -11,6 +11,7 @@ export default defineConfig({
       '/job-analyses': 'http://127.0.0.1:8000',
       '/applications': 'http://127.0.0.1:8000',
       '/profiles': 'http://127.0.0.1:8000',
+      '/agent-runs': 'http://127.0.0.1:8000',
     },
   },
 })
