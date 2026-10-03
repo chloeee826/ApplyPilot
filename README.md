@@ -40,6 +40,9 @@ The repository currently contains a tested full-stack foundation with:
 - persistent agent runs with running, completed, and failed states plus a tool
   trace that makes each evidence lookup inspectable;
 - API endpoints for starting, listing, and retrieving agent runs;
+- a React agent workspace for selecting analyzed jobs and candidate profiles,
+  starting runs, and reviewing matched skills, gaps, project evidence, interview
+  focus areas, run history, and actionable failure states;
 - a Vite development proxy connecting the frontend to FastAPI;
 - pinned backend and frontend dependencies.
 

@@ -27,6 +27,10 @@ interface ProjectForm {
   highlights: string
 }
 
+interface CandidateProfilePanelProps {
+  onProfileCreated?: (profile: CandidateProfile) => void
+}
+
 const emptyProfileForm: ProfileForm = {
   fullName: '',
   headline: '',
@@ -55,7 +59,7 @@ function lineSeparatedItems(value: string): string[] {
     .filter(Boolean)
 }
 
-export function CandidateProfilePanel() {
+export function CandidateProfilePanel({ onProfileCreated }: CandidateProfilePanelProps) {
   const [profile, setProfile] = useState<CandidateProfile | null>(null)
   const [projects, setProjects] = useState<CandidateProject[]>([])
   const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfileForm)
@@ -112,6 +116,7 @@ export function CandidateProfilePanel() {
     try {
       const savedProfile = await createProfile(payload)
       setProfile(savedProfile)
+      onProfileCreated?.(savedProfile)
       setProfileForm(emptyProfileForm)
     } catch (submitError) {
       setError(

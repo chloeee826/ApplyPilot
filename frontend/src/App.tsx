@@ -3,9 +3,12 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { listApplications, updateApplication } from './api/applications'
 import { analyzeJob, listJobAnalyses } from './api/jobAnalyses'
 import { createJob, listJobs } from './api/jobs'
+import { listProfiles } from './api/profiles'
 import './App.css'
+import { AgentWorkspace } from './components/AgentWorkspace'
 import { CandidateProfilePanel } from './components/CandidateProfilePanel'
 import type { Application, ApplicationStatus } from './types/application'
+import type { CandidateProfile } from './types/candidate'
 import type { Job, JobCreate } from './types/job'
 import type { JobAnalysis } from './types/jobAnalysis'
 
@@ -32,6 +35,7 @@ function App() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [applications, setApplications] = useState<Application[]>([])
   const [analyses, setAnalyses] = useState<JobAnalysis[]>([])
+  const [profiles, setProfiles] = useState<CandidateProfile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(
@@ -45,15 +49,18 @@ function App() {
 
     async function loadWorkspace() {
       try {
-        const [savedJobs, savedApplications, savedAnalyses] = await Promise.all([
-          listJobs(),
-          listApplications(),
-          listJobAnalyses(),
-        ])
+        const [savedJobs, savedApplications, savedAnalyses, savedProfiles] =
+          await Promise.all([
+            listJobs(),
+            listApplications(),
+            listJobAnalyses(),
+            listProfiles(),
+          ])
         if (!cancelled) {
           setJobs(savedJobs)
           setApplications(savedApplications)
           setAnalyses(savedAnalyses)
+          setProfiles(savedProfiles)
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -382,7 +389,13 @@ function App() {
         </section>
       </section>
 
-      <CandidateProfilePanel />
+      <CandidateProfilePanel
+        onProfileCreated={(profile) =>
+          setProfiles((current) => [profile, ...current])
+        }
+      />
+
+      <AgentWorkspace jobs={jobs} analyses={analyses} profiles={profiles} />
     </main>
   )
 }
