@@ -15,6 +15,7 @@ from app.models.job_analysis import JobAnalysis
 
 
 DEFAULT_AGENT_MODEL = "gpt-4o-mini"
+DEMO_AGENT_MODEL = "demo-evidence-v1"
 MAX_AGENT_STEPS = 6
 
 
@@ -156,6 +157,114 @@ def _execute_tool(
         }
 
     raise AgentExecutionError(f"Unknown agent tool: {name}")
+
+
+def _normalized_skill(value: str) -> str:
+    return " ".join(value.lower().split())
+
+
+def run_demo_job_match_agent(
+    db: Session,
+    job_id: UUID,
+    profile_id: UUID,
+) -> AgentResult:
+    """Run the evidence workflow without an external model for local demos."""
+    tool_trace: list[dict[str, object]] = []
+    tool_outputs: dict[str, dict[str, object]] = {}
+
+    for index, tool_name in enumerate(
+        [
+            "get_job",
+            "get_job_analysis",
+            "get_candidate_profile",
+            "list_candidate_projects",
+        ],
+        start=1,
+    ):
+        output = _execute_tool(
+            tool_name,
+            db=db,
+            job_id=job_id,
+            profile_id=profile_id,
+        )
+        tool_outputs[tool_name] = output
+        tool_trace.append(
+            {
+                "name": tool_name,
+                "call_id": f"demo-call-{index}",
+                "arguments": {},
+                "output": output,
+            }
+        )
+
+    analysis = tool_outputs["get_job_analysis"]
+    profile = tool_outputs["get_candidate_profile"]
+    projects_output = tool_outputs["list_candidate_projects"]
+
+    job_skills = [str(skill) for skill in analysis["skills"]]
+    candidate_skills = [str(skill) for skill in profile["skills"]]
+    projects = list(projects_output["projects"])
+    evidence_skill_keys = {_normalized_skill(skill) for skill in candidate_skills}
+
+    for project in projects:
+        evidence_skill_keys.update(
+            _normalized_skill(str(technology))
+            for technology in project["technologies"]
+        )
+
+    matched_skills = [
+        skill for skill in job_skills if _normalized_skill(skill) in evidence_skill_keys
+    ]
+    skill_gaps = [
+        skill for skill in job_skills if _normalized_skill(skill) not in evidence_skill_keys
+    ]
+
+    project_evidence: list[str] = []
+    for project in projects:
+        technology_keys = {
+            _normalized_skill(str(technology))
+            for technology in project["technologies"]
+        }
+        supported_skills = [
+            skill for skill in job_skills if _normalized_skill(skill) in technology_keys
+        ]
+        if not supported_skills:
+            continue
+
+        highlights = [str(item) for item in project["highlights"]]
+        evidence_detail = highlights[0] if highlights else str(project["description"])
+        project_evidence.append(
+            f"{project['name']}: {evidence_detail} "
+            f"(supports {', '.join(supported_skills)})."
+        )
+
+    interview_focus = [
+        f"Prepare evidence or an honest gap explanation for {skill}."
+        for skill in skill_gaps[:3]
+    ]
+    interview_focus.extend(
+        f"Be ready to discuss: {requirement}"
+        for requirement in list(analysis["requirements"])[:3]
+    )
+
+    supported_count = len(matched_skills)
+    total_count = len(job_skills)
+    summary = (
+        f"Stored evidence supports {supported_count} of {total_count} extracted job "
+        "skills. Review the listed gaps before applying."
+    )
+
+    return AgentResult(
+        recommendation=JobMatchRecommendation(
+            summary=summary,
+            matched_skills=matched_skills,
+            skill_gaps=skill_gaps,
+            project_evidence=project_evidence,
+            interview_focus=interview_focus,
+        ),
+        tool_trace=tool_trace,
+        model=DEMO_AGENT_MODEL,
+    )
 
 
 def run_job_match_agent(

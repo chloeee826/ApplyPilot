@@ -10,6 +10,7 @@ class AgentRunCreate(BaseModel):
 
     job_id: UUID
     profile_id: UUID
+    mode: Literal["openai", "demo"] = "openai"
 
 
 class AgentRunRead(BaseModel):

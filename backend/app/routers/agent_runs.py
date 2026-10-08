@@ -16,9 +16,11 @@ from app.models.job_analysis import JobAnalysis
 from app.schemas.agent_run import AgentRunCreate, AgentRunRead
 from app.services.job_match_agent import (
     DEFAULT_AGENT_MODEL,
+    DEMO_AGENT_MODEL,
     AgentConfigurationError,
     AgentExecutionError,
     AgentResult,
+    run_demo_job_match_agent,
     run_job_match_agent,
 )
 
@@ -55,14 +57,19 @@ def create_agent_run(
         job_id=request.job_id,
         profile_id=request.profile_id,
         status="running",
-        model=os.getenv("OPENAI_MODEL", DEFAULT_AGENT_MODEL),
+        model=(
+            DEMO_AGENT_MODEL
+            if request.mode == "demo"
+            else os.getenv("OPENAI_MODEL", DEFAULT_AGENT_MODEL)
+        ),
     )
     db.add(record)
     db.commit()
     db.refresh(record)
 
     try:
-        result = runner(db, request.job_id, request.profile_id)
+        selected_runner = run_demo_job_match_agent if request.mode == "demo" else runner
+        result = selected_runner(db, request.job_id, request.profile_id)
     except (AgentConfigurationError, AgentExecutionError) as exc:
         record.status = "failed"
         record.error = str(exc)

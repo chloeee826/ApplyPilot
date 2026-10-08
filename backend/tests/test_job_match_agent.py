@@ -12,9 +12,11 @@ from app.models.job import Job
 from app.models.job_analysis import JobAnalysis
 from app.services.job_match_agent import (
     AGENT_TOOLS,
+    DEMO_AGENT_MODEL,
     AgentConfigurationError,
     AgentExecutionError,
     JobMatchRecommendation,
+    run_demo_job_match_agent,
     run_job_match_agent,
 )
 
@@ -139,6 +141,28 @@ def test_agent_executes_all_tools_and_returns_structured_result(
         isinstance(item, dict) and item.get("type") == "function_call_output"
         for item in second_input
     )
+
+
+def test_demo_agent_uses_all_stored_evidence_without_an_api_key(
+    seeded_session: tuple[Session, Job, CandidateProfile],
+) -> None:
+    session, job, profile = seeded_session
+
+    result = run_demo_job_match_agent(session, job.id, profile.id)
+
+    assert result.model == DEMO_AGENT_MODEL
+    assert result.recommendation.matched_skills == ["Python", "PostgreSQL"]
+    assert result.recommendation.skill_gaps == []
+    assert result.recommendation.project_evidence == [
+        "ApplyPilot: Built persistent job tracking. (supports Python, PostgreSQL)."
+    ]
+    assert [item["name"] for item in result.tool_trace] == [
+        "get_job",
+        "get_job_analysis",
+        "get_candidate_profile",
+        "list_candidate_projects",
+    ]
+    assert result.recommendation.summary.startswith("Stored evidence supports 2 of 2")
 
 
 def test_tool_definitions_are_strict_and_scoped() -> None:

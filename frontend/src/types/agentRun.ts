@@ -10,6 +10,7 @@ export interface AgentToolTrace {
 export interface AgentRunCreate {
   job_id: string
   profile_id: string
+  mode?: 'openai' | 'demo'
 }
 
 export interface AgentRun {

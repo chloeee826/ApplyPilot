@@ -40,6 +40,7 @@ export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps
   const [runs, setRuns] = useState<AgentRun[]>([])
   const [selectedJobId, setSelectedJobId] = useState('')
   const [selectedProfileId, setSelectedProfileId] = useState('')
+  const [executionMode, setExecutionMode] = useState<'demo' | 'openai'>('demo')
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
@@ -93,6 +94,7 @@ export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps
       const savedRun = await createAgentRun({
         job_id: effectiveJobId,
         profile_id: effectiveProfileId,
+        mode: executionMode,
       })
       setRuns((current) => [savedRun, ...current])
       setActiveRunId(savedRun.id)
@@ -123,7 +125,7 @@ export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps
           <p className="step-label">04 · Generate a recommendation</p>
           <h2 id="agent-workspace-heading">Job-match agent</h2>
           <p>
-            The model retrieves saved evidence through controlled tools before it
+            The workflow retrieves saved evidence through controlled tools before it
             recommends what to emphasize and prepare.
           </p>
         </div>
@@ -165,6 +167,19 @@ export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps
             </select>
           </label>
 
+          <label>
+            Execution mode
+            <select
+              value={executionMode}
+              onChange={(event) =>
+                setExecutionMode(event.target.value as 'demo' | 'openai')
+              }
+            >
+              <option value="demo">Deterministic demo</option>
+              <option value="openai">OpenAI agent</option>
+            </select>
+          </label>
+
           <div className="agent-readiness" aria-live="polite">
             <span className={selectedAnalysis ? 'ready' : 'missing'}>
               {selectedAnalysis ? 'Analysis ready' : 'Analyze this job first'}
@@ -178,10 +193,17 @@ export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps
             {isRunning ? 'Running agent…' : 'Run job-match agent'}
           </button>
 
-          <p className="agent-note">
-            A real run requires <code>OPENAI_API_KEY</code> in the backend. Failed runs
-            are saved for debugging instead of being replaced with fake AI results.
-          </p>
+          {executionMode === 'demo' ? (
+            <p className="agent-note">
+              Demo mode calls the same four evidence tools and persists the run, but
+              uses deterministic matching instead of an LLM.
+            </p>
+          ) : (
+            <p className="agent-note">
+              OpenAI mode requires <code>OPENAI_API_KEY</code>. Failed runs are saved
+              for debugging instead of being replaced with fake AI results.
+            </p>
+          )}
         </form>
 
         <div className="agent-output" aria-live="polite">
@@ -198,7 +220,11 @@ export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps
             <article className="agent-result-card">
               <div className="agent-result-heading">
                 <div>
-                  <p className="agent-result-label">Latest selected run</p>
+                  <p className="agent-result-label">
+                    {activeRun.model === 'demo-evidence-v1'
+                      ? 'Deterministic demo result'
+                      : 'Latest selected run'}
+                  </p>
                   <h3>{activeRun.status === 'completed' ? 'Recommendation' : 'Run details'}</h3>
                 </div>
                 <span className={`run-status run-status-${activeRun.status}`}>

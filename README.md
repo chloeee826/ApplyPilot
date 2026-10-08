@@ -1,8 +1,8 @@
 # ApplyPilot
 
-ApplyPilot is a work-in-progress agentic job search platform for application
-tracking, role analysis, and interview preparation. The planned stack is React,
-TypeScript, FastAPI, PostgreSQL, and LLM tool calling.
+ApplyPilot is an agentic job search MVP for application tracking, evidence-backed
+role analysis, and interview preparation. It uses React, TypeScript, FastAPI,
+PostgreSQL, and an optional OpenAI tool-calling workflow.
 
 ## Current status
 
@@ -43,15 +43,39 @@ The repository currently contains a tested full-stack foundation with:
 - a React agent workspace for selecting analyzed jobs and candidate profiles,
   starting runs, and reviewing matched skills, gaps, project evidence, interview
   focus areas, run history, and actionable failure states;
+- an explicitly labelled deterministic demo mode that runs the same four evidence
+  tools and persists a successful recommendation without external API credits;
 - a responsive product shell with routed Overview, Jobs, Candidate, and Agent
   Match workspaces, including database-backed readiness metrics and recent roles;
 - a Vite development proxy connecting the frontend to FastAPI;
 - pinned backend and frontend dependencies.
 
 The OpenAI structured-output and tool-calling integrations are implemented and
-tested with fake clients, but a live model request has not yet been verified
-with a real API key. The current agent uses stored application data only; live
-job search is not implemented yet.
+tested with controlled fake clients, but a live successful model response has not
+yet been verified because the configured account has no API credits. Deterministic
+demo mode is deliberately identified as non-LLM output. The current agent uses
+stored application data only; live job search is not implemented.
+
+## Five-minute MVP demo
+
+No OpenAI key is required for this path:
+
+1. Start PostgreSQL, the backend, and the frontend using the commands below.
+2. From the `backend` directory, run `python -m scripts.seed_demo`. The command is
+   idempotent, so running it again refreshes the same demo records instead of
+   creating duplicates.
+3. Open `http://127.0.0.1:5173/agent`, keep **Deterministic demo** selected, and
+   run Agent Match.
+4. Review the persisted recommendation, skill gaps, project evidence, four-tool
+   trace count, and run history. Refreshing the browser reloads the saved run from
+   PostgreSQL.
+
+To use your own evidence instead, create a profile and project under `/candidate`,
+then save and analyze a real job description under `/jobs`.
+
+Choose **OpenAI agent** only when `OPENAI_API_KEY` is configured. This path runs
+the bounded Responses API tool loop; configuration and execution failures are
+persisted for inspection instead of being replaced with demo output.
 
 ## Run the backend
 
@@ -80,9 +104,9 @@ export OPENAI_MODEL=gpt-4o-mini
 
 Without an API key, or when the model request fails, job analysis continues
 with the versioned `rules-v1` fallback. Never commit a real key to the
-repository. Agent runs require an API key because their purpose is to exercise
-the model-driven tool loop. A failed or unconfigured run is still persisted so
-its status and error can be inspected later.
+repository. OpenAI-mode agent runs require an API key; deterministic demo runs
+do not. A failed or unconfigured OpenAI run is still persisted so its status and
+error can be inspected later.
 
 The API is then available at `http://127.0.0.1:8000`. Its interactive API
 documentation is at `http://127.0.0.1:8000/docs`.

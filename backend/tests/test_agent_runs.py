@@ -142,6 +142,44 @@ def test_create_agent_run_persists_recommendation(client: TestClient) -> None:
     assert saved.summary == "The candidate has relevant backend evidence."
 
 
+def test_demo_agent_run_completes_without_external_model(client: TestClient) -> None:
+    job, profile = create_agent_context(client)
+
+    response = client.post(
+        "/agent-runs",
+        json={"job_id": job["id"], "profile_id": profile["id"], "mode": "demo"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["model"] == "demo-evidence-v1"
+    assert [item["name"] for item in body["tool_trace"]] == [
+        "get_job",
+        "get_job_analysis",
+        "get_candidate_profile",
+        "list_candidate_projects",
+    ]
+    assert body["summary"].startswith("Stored evidence supports")
+
+    with Session(test_engine) as session:
+        saved = session.get(AgentRun, UUID(body["id"]))
+    assert saved is not None
+    assert saved.status == "completed"
+    assert saved.model == "demo-evidence-v1"
+
+
+def test_agent_run_rejects_unknown_execution_mode(client: TestClient) -> None:
+    job, profile = create_agent_context(client)
+
+    response = client.post(
+        "/agent-runs",
+        json={"job_id": job["id"], "profile_id": profile["id"], "mode": "pretend"},
+    )
+
+    assert response.status_code == 422
+
+
 def test_list_and_get_agent_runs(client: TestClient) -> None:
     job, profile = create_agent_context(client)
     created = client.post(
