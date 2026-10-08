@@ -31,8 +31,8 @@ The repository currently contains a tested full-stack foundation with:
 - an optional OpenAI Structured Outputs parser using a Pydantic response schema;
 - automatic fallback to the deterministic parser when an API key is absent or
   the model request does not return a usable structured result;
-- a repeatable parser baseline evaluation covering backend, frontend, mobile,
-  and platform job descriptions;
+- a repeatable, 20-case synthetic parser benchmark spanning backend, frontend,
+  mobile, platform, data, machine-learning, AI, quality, and security roles;
 - a bounded OpenAI Responses API tool-calling loop with four read-only tools
   for jobs, job analyses, candidate profiles, and project evidence;
 - schema-validated job-match recommendations covering matched skills, skill
@@ -119,6 +119,12 @@ Run the deterministic parser baseline evaluation with:
 ```bash
 python -m evals.job_parser_eval
 ```
+
+The current `rules-v1` baseline matches 69 of 93 labelled skills with 98.57%
+precision, 74.19% recall, and exact skill-set matches on 4 of 20 cases. The
+version-controlled benchmark intentionally includes unsupported technologies
+and a React Native ambiguity so future parser improvements can be measured
+against known gaps instead of an easy perfect score.
 
 From the `frontend` directory:
 

@@ -1,0 +1,122 @@
+[
+  {
+    "name": "python_backend",
+    "category": "backend",
+    "description": "Build REST APIs with Python, FastAPI, SQL, and PostgreSQL. Experience with Docker and AWS is preferred.",
+    "expected_skills": ["Python", "FastAPI", "SQL", "PostgreSQL", "Docker", "AWS", "REST APIs"]
+  },
+  {
+    "name": "java_event_backend",
+    "category": "backend",
+    "description": "Develop Java services with Spring Boot, Kafka, SQL, and AWS.",
+    "expected_skills": ["Java", "Spring Boot", "Kafka", "SQL", "AWS"]
+  },
+  {
+    "name": "react_frontend",
+    "category": "frontend",
+    "description": "Develop React applications using TypeScript, JavaScript, and GraphQL.",
+    "expected_skills": ["React", "TypeScript", "JavaScript", "GraphQL"]
+  },
+  {
+    "name": "frontend_delivery",
+    "category": "frontend",
+    "description": "Build JavaScript and React interfaces. Maintain Git and CI/CD workflows.",
+    "expected_skills": ["JavaScript", "React", "Git", "CI/CD"]
+  },
+  {
+    "name": "android_engineer",
+    "category": "mobile",
+    "description": "Build Android applications with Java, Kotlin, and Firebase.",
+    "expected_skills": ["Android", "Java", "Kotlin", "Firebase"]
+  },
+  {
+    "name": "ios_engineer",
+    "category": "mobile",
+    "description": "Develop native iOS applications using Swift and SwiftUI.",
+    "expected_skills": ["iOS", "Swift", "SwiftUI"]
+  },
+  {
+    "name": "aws_platform",
+    "category": "platform",
+    "description": "Maintain AWS, Docker, Kubernetes, Terraform, Git, and CI/CD infrastructure.",
+    "expected_skills": ["AWS", "Docker", "Kubernetes", "Terraform", "Git", "CI/CD"]
+  },
+  {
+    "name": "azure_platform",
+    "category": "platform",
+    "description": "Operate Azure workloads with Docker, Kubernetes, and Terraform.",
+    "expected_skills": ["Azure", "Docker", "Kubernetes", "Terraform"]
+  },
+  {
+    "name": "data_engineer",
+    "category": "data",
+    "description": "Create Python data pipelines using SQL, PostgreSQL, Kafka, and AWS.",
+    "expected_skills": ["Python", "SQL", "PostgreSQL", "Kafka", "AWS"]
+  },
+  {
+    "name": "machine_learning_engineer",
+    "category": "machine_learning",
+    "description": "Build machine learning systems with Python, PyTorch, TensorFlow, Docker, and AWS.",
+    "expected_skills": ["Machine Learning", "Python", "PyTorch", "TensorFlow", "Docker", "AWS"]
+  },
+  {
+    "name": "llm_application_engineer",
+    "category": "ai",
+    "description": "Develop LLM applications with Python, FastAPI, PostgreSQL, and the OpenAI API.",
+    "expected_skills": ["LLMs", "Python", "FastAPI", "PostgreSQL", "OpenAI API"]
+  },
+  {
+    "name": "full_stack_engineer",
+    "category": "full_stack",
+    "description": "Design React and TypeScript user experiences backed by Python, FastAPI, PostgreSQL, and RESTful APIs.",
+    "expected_skills": ["React", "TypeScript", "Python", "FastAPI", "PostgreSQL", "REST APIs"]
+  },
+  {
+    "name": "node_backend",
+    "category": "backend",
+    "description": "Implement Node.js REST APIs using TypeScript, JavaScript, and MongoDB.",
+    "expected_skills": ["Node.js", "REST APIs", "TypeScript", "JavaScript", "MongoDB"]
+  },
+  {
+    "name": "devops_engineer",
+    "category": "platform",
+    "description": "Own AWS infrastructure built with Docker, K8s, Terraform, Git, and continuous integration pipelines.",
+    "expected_skills": ["AWS", "Docker", "Kubernetes", "Terraform", "Git", "CI/CD"]
+  },
+  {
+    "name": "quality_engineer",
+    "category": "quality",
+    "description": "Test React products using TypeScript, Playwright, Git, and CI/CD automation.",
+    "expected_skills": ["React", "TypeScript", "Playwright", "Git", "CI/CD"]
+  },
+  {
+    "name": "cloud_security_engineer",
+    "category": "security",
+    "description": "Secure Python services deployed through AWS, Docker, and Kubernetes. Knowledge of application security is required.",
+    "expected_skills": ["Python", "AWS", "Docker", "Kubernetes", "Application Security"]
+  },
+  {
+    "name": "data_scientist",
+    "category": "machine_learning",
+    "description": "Use Python, SQL, machine learning, and TensorFlow to develop predictive models.",
+    "expected_skills": ["Python", "SQL", "Machine Learning", "TensorFlow"]
+  },
+  {
+    "name": "cross_platform_mobile",
+    "category": "mobile",
+    "description": "Build React Native mobile experiences with TypeScript and Firebase for Android and iOS.",
+    "expected_skills": ["React Native", "TypeScript", "Firebase", "Android", "iOS"]
+  },
+  {
+    "name": "database_engineer",
+    "category": "data",
+    "description": "Optimize SQL and PostgreSQL workloads while operating Redis and MongoDB data stores.",
+    "expected_skills": ["SQL", "PostgreSQL", "Redis", "MongoDB"]
+  },
+  {
+    "name": "product_collaboration",
+    "category": "general",
+    "description": "Collaborate with product managers and designers to deliver accessible customer experiences.",
+    "expected_skills": []
+  }
+]
