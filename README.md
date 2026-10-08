@@ -43,6 +43,8 @@ The repository currently contains a tested full-stack foundation with:
 - a React agent workspace for selecting analyzed jobs and candidate profiles,
   starting runs, and reviewing matched skills, gaps, project evidence, interview
   focus areas, run history, and actionable failure states;
+- a responsive product shell with routed Overview, Jobs, Candidate, and Agent
+  Match workspaces, including database-backed readiness metrics and recent roles;
 - a Vite development proxy connecting the frontend to FastAPI;
 - pinned backend and frontend dependencies.
 
