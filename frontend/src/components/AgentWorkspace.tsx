@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 
 import { createAgentRun, listAgentRuns } from '../api/agentRuns'
 import type { AgentRun } from '../types/agentRun'
@@ -10,6 +11,9 @@ interface AgentWorkspaceProps {
   jobs: Job[]
   analyses: JobAnalysis[]
   profiles: CandidateProfile[]
+  runs: AgentRun[]
+  isLoading: boolean
+  onRunsChange: (runs: AgentRun[]) => void
 }
 
 interface ResultListProps {
@@ -36,42 +40,20 @@ function ResultList({ emptyMessage, items, title, tone }: ResultListProps) {
   )
 }
 
-export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps) {
-  const [runs, setRuns] = useState<AgentRun[]>([])
+export function AgentWorkspace({
+  jobs,
+  analyses,
+  profiles,
+  runs,
+  isLoading,
+  onRunsChange,
+}: AgentWorkspaceProps) {
   const [selectedJobId, setSelectedJobId] = useState('')
   const [selectedProfileId, setSelectedProfileId] = useState('')
   const [executionMode, setExecutionMode] = useState<'demo' | 'openai'>('demo')
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadRuns() {
-      try {
-        const savedRuns = await listAgentRuns()
-        if (!cancelled) {
-          setRuns(savedRuns)
-          setActiveRunId(savedRuns[0]?.id ?? null)
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error ? loadError.message : 'Could not load agent runs',
-          )
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
-
-    void loadRuns()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const effectiveJobId = selectedJobId || jobs[0]?.id || ''
   const effectiveProfileId = selectedProfileId || profiles[0]?.id || ''
@@ -96,7 +78,7 @@ export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps
         profile_id: effectiveProfileId,
         mode: executionMode,
       })
-      setRuns((current) => [savedRun, ...current])
+      onRunsChange([savedRun, ...runs])
       setActiveRunId(savedRun.id)
     } catch (runError) {
       setError(
@@ -104,7 +86,7 @@ export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps
       )
       try {
         const savedRuns = await listAgentRuns()
-        setRuns(savedRuns)
+        onRunsChange(savedRuns)
         setActiveRunId(savedRuns[0]?.id ?? null)
       } catch {
         // Keep the original agent error visible if refreshing failed runs also fails.
@@ -129,7 +111,9 @@ export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps
             recommends what to emphasize and prepare.
           </p>
         </div>
-        <span className="agent-run-count">{runs.length} runs</span>
+        <span className="agent-run-count">
+          {runs.length} {runs.length === 1 ? 'run' : 'runs'}
+        </span>
       </div>
 
       <div className="agent-layout">
@@ -212,7 +196,21 @@ export function AgentWorkspace({ jobs, analyses, profiles }: AgentWorkspaceProps
           {!isLoading && !activeRun && (
             <div className="empty-state">
               <p>No agent recommendations yet.</p>
-              <span>Select analyzed data and start the first run.</span>
+              {profiles.length === 0 ? (
+                <span>
+                  Start by <Link to="/candidate">creating candidate evidence</Link>.
+                </span>
+              ) : jobs.length === 0 ? (
+                <span>
+                  Continue by <Link to="/jobs">saving a target job</Link>.
+                </span>
+              ) : !selectedAnalysis ? (
+                <span>
+                  <Link to="/jobs">Analyze the selected job</Link> before running the agent.
+                </span>
+              ) : (
+                <span>Your evidence is ready. Start the first run.</span>
+              )}
             </div>
           )}
 

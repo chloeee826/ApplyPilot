@@ -277,7 +277,7 @@ export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelP
   return (
     <section className="profile-panel" aria-labelledby="candidate-profile-heading">
       <div className="section-heading">
-        <p className="step-label">03 · Build the evidence base</p>
+        <p className="step-label">Step 1 · Build the evidence base</p>
         <h2 id="candidate-profile-heading">Candidate profile</h2>
         <p>Import your resume, review the draft, then save trusted evidence.</p>
       </div>

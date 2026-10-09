@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 
+import type { AgentRun } from '../types/agentRun'
 import type { Application } from '../types/application'
 import type { CandidateProfile } from '../types/candidate'
 import type { Job } from '../types/job'
@@ -7,6 +8,7 @@ import type { JobAnalysis } from '../types/jobAnalysis'
 
 interface OverviewPageProps {
   analyses: JobAnalysis[]
+  agentRuns: AgentRun[]
   applications: Application[]
   isLoading: boolean
   jobs: Job[]
@@ -15,6 +17,7 @@ interface OverviewPageProps {
 
 export function OverviewPage({
   analyses,
+  agentRuns,
   applications,
   isLoading,
   jobs,
@@ -23,8 +26,50 @@ export function OverviewPage({
   const activeApplications = applications.filter(
     (application) => !['rejected', 'withdrawn'].includes(application.status),
   ).length
-  const analyzedJobIds = new Set(analyses.map((analysis) => analysis.job_id))
-  const nextJob = jobs.find((job) => !analyzedJobIds.has(job.id))
+  const completedRuns = agentRuns.filter((run) => run.status === 'completed')
+  const journeySteps = [
+    {
+      title: 'Build candidate evidence',
+      description: 'Import and review your resume profile and projects.',
+      complete: profiles.length > 0,
+      to: '/candidate',
+    },
+    {
+      title: 'Save a target job',
+      description: 'Store the original posting and track its application status.',
+      complete: jobs.length > 0,
+      to: '/jobs',
+    },
+    {
+      title: 'Analyze requirements',
+      description: 'Extract structured skills and responsibilities from the posting.',
+      complete: analyses.length > 0,
+      to: '/jobs',
+    },
+    {
+      title: 'Generate a match strategy',
+      description: 'Use saved evidence to identify matches, gaps, and interview focus.',
+      complete: completedRuns.length > 0,
+      to: '/agent',
+    },
+  ]
+  const completedStepCount = journeySteps.filter((step) => step.complete).length
+  const currentStepIndex = journeySteps.findIndex((step) => !step.complete)
+  const nextStep =
+    currentStepIndex === -1
+      ? {
+          title: 'Review your latest match',
+          description:
+            'Your first complete workflow is ready. Review the recommendation or run another role.',
+          to: '/agent',
+          linkLabel: 'View Agent Match',
+        }
+      : {
+          title: journeySteps[currentStepIndex].title,
+          description: journeySteps[currentStepIndex].description,
+          to: journeySteps[currentStepIndex].to,
+          linkLabel: `Continue to step ${currentStepIndex + 1}`,
+        }
 
   return (
     <>
@@ -36,14 +81,46 @@ export function OverviewPage({
           agent to prepare a grounded match strategy.
         </p>
         <div className="header-actions">
-          <Link className="primary-link" to="/jobs">
-            Add a target job
+          <Link className="primary-link" to={nextStep.to}>
+            {nextStep.linkLabel}
           </Link>
-          <Link className="secondary-link" to="/agent">
-            Open Agent Match
+          <Link className="secondary-link" to="/jobs">
+            View job pipeline
           </Link>
         </div>
       </header>
+
+      <section className="journey-card" aria-labelledby="journey-heading">
+        <div className="journey-heading">
+          <div>
+            <p className="step-label">Guided demo journey</p>
+            <h2 id="journey-heading">From resume to interview strategy</h2>
+          </div>
+          <span>{isLoading ? 'Loading' : `${completedStepCount} of 4 complete`}</span>
+        </div>
+        <ol className="journey-steps">
+          {journeySteps.map((step, index) => {
+            const isCurrent = index === currentStepIndex
+            return (
+              <li
+                className={step.complete ? 'complete' : isCurrent ? 'current' : 'pending'}
+                key={step.title}
+              >
+                <Link to={step.to}>
+                  <span className="journey-number">
+                    {step.complete ? '✓' : String(index + 1).padStart(2, '0')}
+                  </span>
+                  <div>
+                    <strong>{step.title}</strong>
+                    <small>{step.description}</small>
+                  </div>
+                  <em>{step.complete ? 'Complete' : isCurrent ? 'Next' : 'Later'}</em>
+                </Link>
+              </li>
+            )
+          })}
+        </ol>
+      </section>
 
       <section className="metric-grid" aria-label="Workspace summary">
         <article className="metric-card metric-blue">
@@ -61,6 +138,11 @@ export function OverviewPage({
           <strong>{isLoading ? '—' : analyses.length}</strong>
           <p>Structured requirement sets ready for matching</p>
         </article>
+        <article className="metric-card metric-blue">
+          <span>Completed matches</span>
+          <strong>{isLoading ? '—' : completedRuns.length}</strong>
+          <p>Persistent agent recommendations ready to review</p>
+        </article>
       </section>
 
       <section className="overview-grid">
@@ -69,31 +151,13 @@ export function OverviewPage({
             <p className="step-label">Workspace readiness</p>
             <h2>Your next best action</h2>
           </div>
-          {profiles.length === 0 ? (
-            <>
-              <h3>Create your candidate profile</h3>
-              <p>The agent needs your skills and project evidence before it can match you.</p>
-              <Link to="/candidate">Build candidate profile →</Link>
-            </>
-          ) : nextJob ? (
-            <>
-              <h3>Analyze {nextJob.company_name}</h3>
-              <p>
-                Turn the {nextJob.title} posting into structured skills and requirements.
-              </p>
-              <Link to="/jobs">Analyze job description →</Link>
-            </>
-          ) : jobs.length === 0 ? (
-            <>
-              <h3>Save your first target role</h3>
-              <p>Add a real job description to start building your application pipeline.</p>
-              <Link to="/jobs">Add a job →</Link>
-            </>
+          {isLoading ? (
+            <p className="overview-empty">Loading workspace readiness…</p>
           ) : (
             <>
-              <h3>Your evidence is ready</h3>
-              <p>Run a job-match workflow using your saved profile and analyzed role.</p>
-              <Link to="/agent">Run Agent Match →</Link>
+              <h3>{nextStep.title}</h3>
+              <p>{nextStep.description}</p>
+              <Link to={nextStep.to}>{nextStep.linkLabel} →</Link>
             </>
           )}
         </article>

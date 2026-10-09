@@ -52,6 +52,10 @@ The repository currently contains a tested full-stack foundation with:
   tools and persists a successful recommendation without external API credits;
 - a responsive product shell with routed Overview, Jobs, Candidate, and Agent
   Match workspaces, including database-backed readiness metrics and recent roles;
+- a four-step guided journey that derives completion and the next best action
+  from persisted profiles, jobs, analyses, and completed agent runs;
+- page-level onboarding, actionable empty states, and success feedback for the
+  resume-to-recommendation workflow;
 - a production application factory that serves the compiled React workspace and
   namespaces JSON endpoints under `/api` without client-route collisions;
 - a multi-stage, non-root Docker image with a platform health check and no local
@@ -73,9 +77,10 @@ No OpenAI key is required for this path:
 2. From the `backend` directory, run `python -m scripts.seed_demo`. The command is
    idempotent, so running it again refreshes the same demo records instead of
    creating duplicates.
-3. Open `http://127.0.0.1:5173/agent`, keep **Deterministic demo** selected, and
-   run Agent Match.
-4. Review the persisted recommendation, skill gaps, project evidence, four-tool
+3. Open `http://127.0.0.1:5173` and use the guided journey to review the seeded
+   candidate evidence, target role, and structured analysis.
+4. Continue to **Agent Match**, keep **Deterministic demo** selected, and run it.
+5. Review the persisted recommendation, skill gaps, project evidence, four-tool
    trace count, and run history. Refreshing the browser reloads the saved run from
    PostgreSQL.
 

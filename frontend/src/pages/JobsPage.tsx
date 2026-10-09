@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react'
 
+import { PageGuide } from '../components/PageGuide'
 import type { Application, ApplicationStatus } from '../types/application'
 import type { Job, JobCreate } from '../types/job'
 import type { JobAnalysis } from '../types/jobAnalysis'
@@ -48,18 +49,26 @@ export function JobsPage({
   return (
     <>
       <header className="page-header">
-        <p className="eyebrow">Job application tracker</p>
+        <p className="eyebrow">Steps 2–3 · Job application tracker</p>
         <h1>Jobs</h1>
         <p>
           Save target roles, move applications through the pipeline, and turn job
           descriptions into structured requirements.
         </p>
+        <PageGuide
+          label="Job tracking workflow"
+          items={[
+            { title: 'Save', description: 'Store the original job posting.' },
+            { title: 'Track', description: 'Update the application pipeline status.' },
+            { title: 'Analyze', description: 'Extract skills and role requirements.' },
+          ]}
+        />
       </header>
 
       <section className="workspace" aria-label="Job workspace">
         <form className="job-form" onSubmit={onSubmit}>
           <div className="section-heading">
-            <p className="step-label">01 · Save a role</p>
+            <p className="step-label">Step 2 · Save a role</p>
             <h2>Add a target job</h2>
             <p>Store the original posting before analyzing it.</p>
           </div>
@@ -127,7 +136,7 @@ export function JobsPage({
         <section className="jobs-panel" aria-labelledby="saved-jobs-heading">
           <div className="section-heading jobs-heading">
             <div>
-              <p className="step-label">02 · Review pipeline</p>
+              <p className="step-label">Step 3 · Track and analyze</p>
               <h2 id="saved-jobs-heading">Saved jobs</h2>
             </div>
             <span className="job-count">{jobs.length}</span>
