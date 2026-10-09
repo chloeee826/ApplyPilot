@@ -3,14 +3,17 @@ import { useEffect, useState, type FormEvent } from 'react'
 import {
   createProfile,
   createProject,
+  extractResume,
   listProfiles,
   listProjects,
+  updateProfile,
 } from '../api/profiles'
 import type {
   CandidateProfile,
   CandidateProfileCreate,
   CandidateProject,
   CandidateProjectCreate,
+  ResumeExtraction,
 } from '../types/candidate'
 
 interface ProfileForm {
@@ -28,7 +31,7 @@ interface ProjectForm {
 }
 
 interface CandidateProfilePanelProps {
-  onProfileCreated?: (profile: CandidateProfile) => void
+  onProfileSaved?: (profile: CandidateProfile) => void
 }
 
 const emptyProfileForm: ProfileForm = {
@@ -59,14 +62,30 @@ function lineSeparatedItems(value: string): string[] {
     .filter(Boolean)
 }
 
-export function CandidateProfilePanel({ onProfileCreated }: CandidateProfilePanelProps) {
+function profileToForm(profile: CandidateProfileCreate): ProfileForm {
+  return {
+    fullName: profile.full_name,
+    headline: profile.headline ?? '',
+    summary: profile.summary,
+    skills: profile.skills.join(', '),
+  }
+}
+
+export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelProps) {
   const [profile, setProfile] = useState<CandidateProfile | null>(null)
   const [projects, setProjects] = useState<CandidateProject[]>([])
   const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfileForm)
   const [projectForm, setProjectForm] = useState<ProjectForm>(emptyProjectForm)
+  const [selectedResume, setSelectedResume] = useState<File | null>(null)
+  const [resumeExtraction, setResumeExtraction] = useState<ResumeExtraction | null>(
+    null,
+  )
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isExtracting, setIsExtracting] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -101,26 +120,58 @@ export function CandidateProfilePanel({ onProfileCreated }: CandidateProfilePane
     }
   }, [])
 
+  async function handleResumeSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!selectedResume) return
+
+    setIsExtracting(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const extraction = await extractResume(selectedResume)
+      setResumeExtraction(extraction)
+      setProfileForm(profileToForm(extraction.profile))
+      setIsEditingProfile(true)
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error ? uploadError.message : 'Could not read resume',
+      )
+    } finally {
+      setIsExtracting(false)
+    }
+  }
+
   async function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsSubmitting(true)
     setError(null)
+    setNotice(null)
 
     const payload: CandidateProfileCreate = {
       full_name: profileForm.fullName.trim(),
       summary: profileForm.summary.trim(),
       skills: commaSeparatedItems(profileForm.skills),
+      headline: profileForm.headline.trim() || null,
     }
-    if (profileForm.headline.trim()) payload.headline = profileForm.headline.trim()
 
     try {
-      const savedProfile = await createProfile(payload)
+      const savedProfile = profile
+        ? await updateProfile(profile.id, payload)
+        : await createProfile(payload)
       setProfile(savedProfile)
-      onProfileCreated?.(savedProfile)
+      onProfileSaved?.(savedProfile)
       setProfileForm(emptyProfileForm)
+      setResumeExtraction(null)
+      setSelectedResume(null)
+      setIsEditingProfile(false)
+      setNotice(
+        profile
+          ? 'Reviewed resume fields were saved to your active profile.'
+          : 'Candidate profile created from your reviewed draft.',
+      )
     } catch (submitError) {
       setError(
-        submitError instanceof Error ? submitError.message : 'Could not create profile',
+        submitError instanceof Error ? submitError.message : 'Could not save profile',
       )
     } finally {
       setIsSubmitting(false)
@@ -133,6 +184,7 @@ export function CandidateProfilePanel({ onProfileCreated }: CandidateProfilePane
 
     setIsSubmitting(true)
     setError(null)
+    setNotice(null)
     const payload: CandidateProjectCreate = {
       name: projectForm.name.trim(),
       description: projectForm.description.trim(),
@@ -144,6 +196,7 @@ export function CandidateProfilePanel({ onProfileCreated }: CandidateProfilePane
       const savedProject = await createProject(profile.id, payload)
       setProjects((current) => [savedProject, ...current])
       setProjectForm(emptyProjectForm)
+      setNotice('Project evidence added to the active profile.')
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : 'Could not add project',
@@ -153,22 +206,93 @@ export function CandidateProfilePanel({ onProfileCreated }: CandidateProfilePane
     }
   }
 
+  function startManualEdit() {
+    if (!profile) return
+    setProfileForm(profileToForm(profile))
+    setResumeExtraction(null)
+    setIsEditingProfile(true)
+    setError(null)
+    setNotice(null)
+  }
+
+  function cancelProfileReview() {
+    setProfileForm(emptyProfileForm)
+    setResumeExtraction(null)
+    setSelectedResume(null)
+    setIsEditingProfile(false)
+    setError(null)
+  }
+
   if (isLoading) {
     return <section className="profile-panel empty-state">Loading candidate data…</section>
   }
+
+  const showProfileForm = !profile || isEditingProfile
 
   return (
     <section className="profile-panel" aria-labelledby="candidate-profile-heading">
       <div className="section-heading">
         <p className="step-label">03 · Build the evidence base</p>
         <h2 id="candidate-profile-heading">Candidate profile</h2>
-        <p>Give future agent recommendations a factual source to retrieve from.</p>
+        <p>Import your resume, review the draft, then save trusted evidence.</p>
       </div>
 
-      {error && <p className="error-message">{error}</p>}
+      <article className="resume-import-card">
+        <div>
+          <p className="profile-label">Recommended starting point</p>
+          <h3>Import a resume</h3>
+          <p>
+            Upload a text-based PDF up to 5 MB. ApplyPilot extracts a draft for
+            review—it never saves the original file.
+          </p>
+        </div>
+        <form className="resume-upload-form" onSubmit={handleResumeSubmit}>
+          <label>
+            PDF resume
+            <input
+              accept=".pdf,application/pdf"
+              required
+              type="file"
+              onChange={(event) => {
+                setSelectedResume(event.target.files?.[0] ?? null)
+                setError(null)
+                setNotice(null)
+              }}
+            />
+          </label>
+          <button
+            className="primary-button"
+            disabled={!selectedResume || isExtracting}
+            type="submit"
+          >
+            {isExtracting ? 'Extracting…' : 'Create review draft'}
+          </button>
+        </form>
+      </article>
 
-      {!profile ? (
-        <form className="profile-form" onSubmit={handleProfileSubmit}>
+      {error && <p className="error-message">{error}</p>}
+      {notice && <p className="success-message">{notice}</p>}
+
+      {showProfileForm && (
+        <form className="profile-form review-form" onSubmit={handleProfileSubmit}>
+          <div className="review-heading">
+            <div>
+              <p className="profile-label">
+                {resumeExtraction ? 'Resume draft · review required' : 'Manual profile'}
+              </p>
+              <h3>{profile ? 'Review profile update' : 'Create candidate profile'}</h3>
+            </div>
+            {resumeExtraction && <span>{resumeExtraction.page_count} page PDF</span>}
+          </div>
+
+          {resumeExtraction && (
+            <ul className="extraction-warnings" aria-label="Resume extraction warnings">
+              {resumeExtraction.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          )}
+
           <div className="form-row">
             <label>
               Full name
@@ -230,15 +354,38 @@ export function CandidateProfilePanel({ onProfileCreated }: CandidateProfilePane
               placeholder="Python, TypeScript, PostgreSQL"
             />
           </label>
-          <button className="primary-button" disabled={isSubmitting} type="submit">
-            {isSubmitting ? 'Saving…' : 'Create profile'}
-          </button>
+          <div className="form-actions">
+            <button className="primary-button" disabled={isSubmitting} type="submit">
+              {isSubmitting
+                ? 'Saving…'
+                : profile
+                  ? 'Confirm profile update'
+                  : 'Confirm and create profile'}
+            </button>
+            {profile && (
+              <button
+                className="secondary-button"
+                disabled={isSubmitting}
+                type="button"
+                onClick={cancelProfileReview}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
-      ) : (
+      )}
+
+      {profile && !showProfileForm && (
         <div className="candidate-layout">
           <div>
             <article className="profile-card">
-              <p className="profile-label">Active candidate</p>
+              <div className="profile-card-heading">
+                <p className="profile-label">Active candidate</p>
+                <button className="text-button" type="button" onClick={startManualEdit}>
+                  Edit profile
+                </button>
+              </div>
               <h3>{profile.full_name}</h3>
               {profile.headline && <p className="profile-headline">{profile.headline}</p>}
               <p>{profile.summary}</p>

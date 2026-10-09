@@ -10,6 +10,15 @@ export interface CandidateProfile extends CandidateProfileCreate {
   created_at: string
 }
 
+export interface ResumeExtraction {
+  source_filename: string
+  parser_version: string
+  page_count: number
+  character_count: number
+  profile: CandidateProfileCreate
+  warnings: string[]
+}
+
 export interface CandidateProjectCreate {
   name: string
   description: string

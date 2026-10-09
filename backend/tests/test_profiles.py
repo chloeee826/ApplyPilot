@@ -105,6 +105,50 @@ def test_create_profile_requires_at_least_one_skill(client: TestClient) -> None:
     assert response.status_code == 422
 
 
+def test_update_profile_saves_reviewed_resume_fields(client: TestClient) -> None:
+    profile = create_profile(client)
+
+    response = client.patch(
+        f"/profiles/{profile['id']}",
+        json={
+            "headline": "AI Software Engineer",
+            "summary": "Builds evidence-grounded agent workflows.",
+            "skills": ["Python", "FastAPI", "React", "PostgreSQL"],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["full_name"] == "Chloe Example"
+    assert response.json()["headline"] == "AI Software Engineer"
+    assert response.json()["skills"][-1] == "PostgreSQL"
+
+    with Session(test_engine) as session:
+        saved_profile = session.get(CandidateProfile, UUID(profile["id"]))
+
+    assert saved_profile is not None
+    assert saved_profile.summary == "Builds evidence-grounded agent workflows."
+
+
+def test_update_profile_rejects_null_required_field(client: TestClient) -> None:
+    profile = create_profile(client)
+
+    response = client.patch(
+        f"/profiles/{profile['id']}",
+        json={"full_name": None},
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_profile_returns_404_for_unknown_profile(client: TestClient) -> None:
+    response = client.patch(
+        "/profiles/00000000-0000-0000-0000-000000000000",
+        json={"headline": "Software Engineer"},
+    )
+
+    assert response.status_code == 404
+
+
 def test_create_project_persists_evidence(client: TestClient) -> None:
     profile = create_profile(client)
     response = client.post(

@@ -2,6 +2,8 @@ fastapi==0.141.1
 httpx2==2.13.0
 openai==3.23.0
 psycopg[binary]==3.3.6
+pypdf==6.19.0
 pytest==9.1.1
+python-multipart==0.0.32
 SQLAlchemy==2.1.1
 uvicorn[standard]==0.53.0

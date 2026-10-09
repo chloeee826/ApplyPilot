@@ -3,6 +3,7 @@ import type {
   CandidateProfileCreate,
   CandidateProject,
   CandidateProjectCreate,
+  ResumeExtraction,
 } from '../types/candidate'
 import { parseResponse } from './client'
 
@@ -20,6 +21,29 @@ export async function createProfile(
     body: JSON.stringify(profile),
   })
   return parseResponse<CandidateProfile>(response)
+}
+
+export async function updateProfile(
+  profileId: string,
+  profile: CandidateProfileCreate,
+): Promise<CandidateProfile> {
+  const response = await fetch(`/profiles/${profileId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(profile),
+  })
+  return parseResponse<CandidateProfile>(response)
+}
+
+export async function extractResume(resume: File): Promise<ResumeExtraction> {
+  const formData = new FormData()
+  formData.append('resume', resume)
+
+  const response = await fetch('/resume-extractions', {
+    method: 'POST',
+    body: formData,
+  })
+  return parseResponse<ResumeExtraction>(response)
 }
 
 export async function listProjects(profileId: string): Promise<CandidateProject[]> {

@@ -10,6 +10,7 @@ from app.models.candidate import CandidateProfile, CandidateProject
 from app.schemas.candidate import (
     CandidateProfileCreate,
     CandidateProfileRead,
+    CandidateProfileUpdate,
     CandidateProjectCreate,
     CandidateProjectRead,
 )
@@ -61,6 +62,22 @@ def get_profile(
     db: Annotated[Session, Depends(get_db)],
 ) -> CandidateProfile:
     return get_profile_or_404(db, profile_id)
+
+
+@router.patch("/{profile_id}", response_model=CandidateProfileRead)
+def update_profile(
+    profile_id: UUID,
+    updates: CandidateProfileUpdate,
+    db: Annotated[Session, Depends(get_db)],
+) -> CandidateProfile:
+    """Apply only the candidate fields confirmed by the user."""
+    profile = get_profile_or_404(db, profile_id)
+    for field_name, value in updates.model_dump(exclude_unset=True).items():
+        setattr(profile, field_name, value)
+
+    db.commit()
+    db.refresh(profile)
+    return profile
 
 
 @router.post(

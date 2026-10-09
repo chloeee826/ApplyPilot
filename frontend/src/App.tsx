@@ -242,8 +242,15 @@ function App() {
                   <p>Give every recommendation a factual source of skills and project evidence.</p>
                 </header>
                 <CandidateProfilePanel
-                  onProfileCreated={(profile) =>
-                    setProfiles((current) => [profile, ...current])
+                  onProfileSaved={(profile) =>
+                    setProfiles((current) => {
+                      const exists = current.some((candidate) => candidate.id === profile.id)
+                      return exists
+                        ? current.map((candidate) =>
+                            candidate.id === profile.id ? profile : candidate,
+                          )
+                        : [profile, ...current]
+                    })
                   }
                 />
               </div>
