@@ -6,11 +6,11 @@ from pathlib import Path
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 
-from app.schemas.resume import ResumeProfileDraft
+from app.schemas.resume import ResumeProfileDraft, ResumeProjectDraft
 from app.services.job_parser import SKILL_PATTERNS
 
 
-PARSER_VERSION = "resume-rules-v1"
+PARSER_VERSION = "resume-rules-v2"
 SECTION_HEADINGS = {
     "education",
     "experience",
@@ -44,6 +44,7 @@ class ExtractedPdf:
 @dataclass(frozen=True)
 class ParsedResume:
     profile: ResumeProfileDraft
+    projects: list[ResumeProjectDraft]
     warnings: list[str]
 
 
@@ -124,6 +125,80 @@ def _section_body(lines: list[str], names: set[str]) -> list[str]:
     return body
 
 
+def _project_section_lines(text: str) -> list[tuple[str, bool]]:
+    """Return project-section lines while preserving bullet information."""
+    raw_lines = text.splitlines()
+    start_index: int | None = None
+    for index, raw_line in enumerate(raw_lines):
+        if raw_line.strip().casefold().rstrip(":") in {"projects", "selected projects"}:
+            start_index = index + 1
+            break
+    if start_index is None:
+        return []
+
+    project_lines: list[tuple[str, bool]] = []
+    for raw_line in raw_lines[start_index:]:
+        stripped = re.sub(r"\s+", " ", raw_line).strip()
+        if not stripped:
+            continue
+        cleaned = stripped.strip(" •*\t")
+        if _is_heading(cleaned):
+            break
+        is_bullet = bool(re.match(r"^[\s]*[•*\-–—]", raw_line))
+        project_lines.append((cleaned, is_bullet))
+    return project_lines
+
+
+def _skills_in_text(text: str) -> list[str]:
+    normalized = text.casefold()
+    return [
+        skill
+        for skill, pattern in SKILL_PATTERNS.items()
+        if re.search(pattern, normalized, flags=re.IGNORECASE)
+    ]
+
+
+def _split_project_header(header: str) -> tuple[str, str]:
+    for separator in (" | ", " — ", " – ", " - "):
+        if separator in header:
+            name, context = header.split(separator, maxsplit=1)
+            return name.strip(), context.strip()
+    return header.strip(), ""
+
+
+def _parse_project_drafts(text: str) -> list[ResumeProjectDraft]:
+    section_lines = _project_section_lines(text)
+    projects: list[ResumeProjectDraft] = []
+    current_header: str | None = None
+    current_details: list[str] = []
+
+    def save_current() -> None:
+        nonlocal current_header, current_details
+        if current_header is None or not current_details:
+            return
+        name, header_context = _split_project_header(current_header)
+        project_text = " ".join([header_context, *current_details]).strip()
+        projects.append(
+            ResumeProjectDraft(
+                name=name[:160],
+                description=current_details[0][:2000],
+                technologies=_skills_in_text(project_text)[:30],
+                highlights=current_details[:20],
+            )
+        )
+
+    for line, is_bullet in section_lines:
+        if not is_bullet:
+            save_current()
+            current_header = line
+            current_details = []
+        elif current_header is not None:
+            current_details.append(line.lstrip("-–— ").strip())
+
+    save_current()
+    return projects[:20]
+
+
 def parse_resume_text(text: str, filename: str) -> ParsedResume:
     """Build a predictable draft; the caller must let the user review it."""
     lines = _clean_lines(text)
@@ -132,7 +207,6 @@ def parse_resume_text(text: str, filename: str) -> ParsedResume:
 
     warnings = [
         "Review every field before saving; deterministic parsing can misread resume layouts.",
-        "Projects are not imported in this version and should be reviewed separately.",
     ]
     header_lines: list[str] = []
     for line in lines[:8]:
@@ -171,14 +245,17 @@ def parse_resume_text(text: str, filename: str) -> ParsedResume:
     if not summary:
         raise ResumeExtractionError("A candidate summary could not be inferred.")
 
-    normalized_text = text.casefold()
-    skills = [
-        skill
-        for skill, pattern in SKILL_PATTERNS.items()
-        if re.search(pattern, normalized_text, flags=re.IGNORECASE)
-    ]
+    skills = _skills_in_text(text)
     if not skills:
         warnings.append("No supported skills were detected; add them during review.")
+
+    projects = _parse_project_drafts(text)
+    if not projects:
+        warnings.append(
+            "No supported project layout was detected; add project evidence manually."
+        )
+    elif any(not project.technologies for project in projects):
+        warnings.append("Some projects have no detected technologies; review them before saving.")
 
     return ParsedResume(
         profile=ResumeProfileDraft(
@@ -187,5 +264,6 @@ def parse_resume_text(text: str, filename: str) -> ParsedResume:
             summary=summary,
             skills=skills,
         ),
+        projects=projects,
         warnings=warnings,
     )

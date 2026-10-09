@@ -6,6 +6,7 @@ import {
   extractResume,
   listProfiles,
   listProjects,
+  saveCandidateImport,
   updateProfile,
 } from '../api/profiles'
 import type {
@@ -71,6 +72,15 @@ function profileToForm(profile: CandidateProfileCreate): ProfileForm {
   }
 }
 
+function projectToForm(project: CandidateProjectCreate): ProjectForm {
+  return {
+    name: project.name,
+    description: project.description,
+    technologies: project.technologies.join(', '),
+    highlights: project.highlights.join('\n'),
+  }
+}
+
 export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelProps) {
   const [profile, setProfile] = useState<CandidateProfile | null>(null)
   const [projects, setProjects] = useState<CandidateProject[]>([])
@@ -80,6 +90,7 @@ export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelP
   const [resumeExtraction, setResumeExtraction] = useState<ResumeExtraction | null>(
     null,
   )
+  const [resumeProjectForms, setResumeProjectForms] = useState<ProjectForm[]>([])
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isExtracting, setIsExtracting] = useState(false)
@@ -131,6 +142,7 @@ export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelP
       const extraction = await extractResume(selectedResume)
       setResumeExtraction(extraction)
       setProfileForm(profileToForm(extraction.profile))
+      setResumeProjectForms(extraction.projects.map(projectToForm))
       setIsEditingProfile(true)
     } catch (uploadError) {
       setError(
@@ -155,19 +167,50 @@ export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelP
     }
 
     try {
-      const savedProfile = profile
-        ? await updateProfile(profile.id, payload)
-        : await createProfile(payload)
+      let savedProfile: CandidateProfile
+      let savedImportProjects: CandidateProject[] = []
+      let importNotice: string | null = null
+      if (resumeExtraction) {
+        const reviewedProjects: CandidateProjectCreate[] = resumeProjectForms.map(
+          (project) => ({
+            name: project.name.trim(),
+            description: project.description.trim(),
+            technologies: commaSeparatedItems(project.technologies),
+            highlights: lineSeparatedItems(project.highlights),
+          }),
+        )
+        const result = await saveCandidateImport(
+          payload,
+          reviewedProjects,
+          profile?.id,
+        )
+        savedProfile = result.profile
+        savedImportProjects = result.projects
+        importNotice = `Profile saved with ${result.created_project_count} new and ${result.updated_project_count} updated project${result.projects.length === 1 ? '' : 's'}.`
+      } else {
+        savedProfile = profile
+          ? await updateProfile(profile.id, payload)
+          : await createProfile(payload)
+      }
       setProfile(savedProfile)
+      if (savedImportProjects.length > 0) {
+        const importedIds = new Set(savedImportProjects.map((project) => project.id))
+        setProjects((current) => [
+          ...savedImportProjects,
+          ...current.filter((project) => !importedIds.has(project.id)),
+        ])
+      }
       onProfileSaved?.(savedProfile)
       setProfileForm(emptyProfileForm)
       setResumeExtraction(null)
+      setResumeProjectForms([])
       setSelectedResume(null)
       setIsEditingProfile(false)
       setNotice(
-        profile
-          ? 'Reviewed resume fields were saved to your active profile.'
-          : 'Candidate profile created from your reviewed draft.',
+        importNotice ??
+          (profile
+            ? 'Reviewed profile fields were saved to your active profile.'
+            : 'Candidate profile created from your reviewed draft.'),
       )
     } catch (submitError) {
       setError(
@@ -210,6 +253,7 @@ export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelP
     if (!profile) return
     setProfileForm(profileToForm(profile))
     setResumeExtraction(null)
+    setResumeProjectForms([])
     setIsEditingProfile(true)
     setError(null)
     setNotice(null)
@@ -218,6 +262,7 @@ export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelP
   function cancelProfileReview() {
     setProfileForm(emptyProfileForm)
     setResumeExtraction(null)
+    setResumeProjectForms([])
     setSelectedResume(null)
     setIsEditingProfile(false)
     setError(null)
@@ -354,6 +399,113 @@ export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelP
               placeholder="Python, TypeScript, PostgreSQL"
             />
           </label>
+          {resumeExtraction && (
+            <section
+              className="imported-project-review"
+              aria-labelledby="project-drafts-heading"
+            >
+              <div className="project-review-heading">
+                <div>
+                  <p className="profile-label">Project evidence draft</p>
+                  <h3 id="project-drafts-heading">
+                    Review {resumeProjectForms.length} extracted project
+                    {resumeProjectForms.length === 1 ? '' : 's'}
+                  </h3>
+                </div>
+                <span>Saved in the same transaction</span>
+              </div>
+              {resumeProjectForms.length === 0 && (
+                <p className="empty-project-draft">
+                  No compatible project section was detected. You can add project
+                  evidence after saving the profile.
+                </p>
+              )}
+              {resumeProjectForms.map((project, index) => (
+                <fieldset className="project-draft-card" key={`project-${index}`}>
+                  <legend>Project {index + 1}</legend>
+                  <button
+                    className="remove-project-button"
+                    type="button"
+                    onClick={() =>
+                      setResumeProjectForms((current) =>
+                        current.filter((_, projectIndex) => projectIndex !== index),
+                      )
+                    }
+                  >
+                    Remove draft
+                  </button>
+                  <label>
+                    Project name
+                    <input
+                      required
+                      maxLength={160}
+                      value={project.name}
+                      onChange={(event) =>
+                        setResumeProjectForms((current) =>
+                          current.map((item, projectIndex) =>
+                            projectIndex === index
+                              ? { ...item, name: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    Description
+                    <textarea
+                      required
+                      rows={2}
+                      maxLength={2000}
+                      value={project.description}
+                      onChange={(event) =>
+                        setResumeProjectForms((current) =>
+                          current.map((item, projectIndex) =>
+                            projectIndex === index
+                              ? { ...item, description: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    Technologies <span>Comma separated</span>
+                    <input
+                      required
+                      value={project.technologies}
+                      onChange={(event) =>
+                        setResumeProjectForms((current) =>
+                          current.map((item, projectIndex) =>
+                            projectIndex === index
+                              ? { ...item, technologies: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    Evidence highlights <span>One per line</span>
+                    <textarea
+                      required
+                      rows={3}
+                      value={project.highlights}
+                      onChange={(event) =>
+                        setResumeProjectForms((current) =>
+                          current.map((item, projectIndex) =>
+                            projectIndex === index
+                              ? { ...item, highlights: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                </fieldset>
+              ))}
+            </section>
+          )}
           <div className="form-actions">
             <button className="primary-button" disabled={isSubmitting} type="submit">
               {isSubmitting

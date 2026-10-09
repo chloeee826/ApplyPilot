@@ -62,5 +62,6 @@ async def preview_resume(
         page_count=extracted.page_count,
         character_count=len(extracted.text),
         profile=parsed.profile,
+        projects=parsed.projects,
         warnings=parsed.warnings,
     )

@@ -155,7 +155,7 @@ function App() {
   async function checkBackend() {
     setBackendStatus('Checking...')
     try {
-      const response = await fetch('/health')
+      const response = await fetch('/api/health')
       if (!response.ok) throw new Error('Health check failed')
       const data = (await response.json()) as { status: string }
       setBackendStatus(data.status)

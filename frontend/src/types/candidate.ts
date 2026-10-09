@@ -16,7 +16,15 @@ export interface ResumeExtraction {
   page_count: number
   character_count: number
   profile: CandidateProfileCreate
+  projects: CandidateProjectCreate[]
   warnings: string[]
+}
+
+export interface CandidateImportResult {
+  profile: CandidateProfile
+  projects: CandidateProject[]
+  created_project_count: number
+  updated_project_count: number
 }
 
 export interface CandidateProjectCreate {

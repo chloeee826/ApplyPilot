@@ -6,13 +6,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/health': 'http://127.0.0.1:8000',
-      '/jobs': 'http://127.0.0.1:8000',
-      '/job-analyses': 'http://127.0.0.1:8000',
-      '/applications': 'http://127.0.0.1:8000',
-      '/profiles': 'http://127.0.0.1:8000',
-      '/resume-extractions': 'http://127.0.0.1:8000',
-      '/agent-runs': 'http://127.0.0.1:8000',
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
     },
   },
 })

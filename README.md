@@ -22,7 +22,12 @@ The repository currently contains a tested full-stack foundation with:
 - persistent application status updates from the React workspace;
 - PostgreSQL-backed candidate profiles with structured skill lists;
 - project evidence records with technologies and concrete highlights;
-- a React candidate workspace for creating and reloading profile evidence;
+- a safe, in-memory PDF resume preview that validates uploads and returns
+  reviewable profile and project drafts without storing the original file;
+- a React candidate workflow for editing or removing extracted evidence before
+  any data is persisted;
+- an atomic candidate-import endpoint that saves the confirmed profile and
+  projects together and updates matching project names on repeated imports;
 - a versioned rule-based job-description parser that extracts skills,
   requirements, preferred qualifications, and responsibilities;
 - persistent structured job analyses with automatic invalidation when a job
@@ -47,6 +52,10 @@ The repository currently contains a tested full-stack foundation with:
   tools and persists a successful recommendation without external API credits;
 - a responsive product shell with routed Overview, Jobs, Candidate, and Agent
   Match workspaces, including database-backed readiness metrics and recent roles;
+- a production application factory that serves the compiled React workspace and
+  namespaces JSON endpoints under `/api` without client-route collisions;
+- a multi-stage, non-root Docker image with a platform health check and no local
+  secrets, virtual environments, tests, or frontend dependencies in the runtime;
 - a Vite development proxy connecting the frontend to FastAPI;
 - pinned backend and frontend dependencies.
 
@@ -70,8 +79,10 @@ No OpenAI key is required for this path:
    trace count, and run history. Refreshing the browser reloads the saved run from
    PostgreSQL.
 
-To use your own evidence instead, create a profile and project under `/candidate`,
-then save and analyze a real job description under `/jobs`.
+To use your own evidence instead, open `/candidate`, upload a text-based PDF
+resume of up to 5 MB, review every extracted profile and project field, and
+confirm the import. Scanned-image PDFs require OCR and are not supported yet.
+Then save and analyze a real job description under `/jobs`.
 
 Choose **OpenAI agent** only when `OPENAI_API_KEY` is configured. This path runs
 the bounded Responses API tool loop; configuration and execution failures are
@@ -122,8 +133,32 @@ npm run dev
 ```
 
 The frontend is then available at `http://127.0.0.1:5173`. During local
-development, Vite proxies `/health`, `/jobs`, `/job-analyses`, `/applications`,
-`/profiles`, and `/agent-runs` requests to the FastAPI server on port `8000`.
+development, the browser sends JSON requests under `/api/*`; Vite removes the
+`/api` prefix and proxies them to the FastAPI server on port `8000`. Frontend
+pages such as `/jobs` therefore remain separate from API paths such as
+`/api/jobs`.
+
+## Build the production container
+
+ApplyPilot can run as one container: Node builds the React application, then
+FastAPI serves both the compiled frontend and namespaced `/api/*` endpoints.
+The runtime image runs as a non-root user.
+
+```bash
+docker build -t applypilot .
+docker run --rm -p 8000:8000 \
+  -e DATABASE_URL=postgresql+psycopg://user:password@database:5432/applypilot \
+  applypilot
+```
+
+A hosted runtime must provide `DATABASE_URL`. `PORT` is optional and defaults to
+`8000`; `OPENAI_API_KEY` and `OPENAI_MODEL` are optional because deterministic
+demo mode does not require model credits. Configure the platform health check to
+request `/health`. The public application, API documentation, and JSON API are
+then available at `/`, `/docs`, and `/api/*`, respectively.
+
+Never bake `.env` into the image. `.dockerignore` excludes local secrets,
+virtual environments, caches, `node_modules`, and previously generated builds.
 
 ## Run the tests
 

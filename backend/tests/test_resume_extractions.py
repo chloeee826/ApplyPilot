@@ -52,6 +52,38 @@ Built REST APIs for production services.
     assert any("inferred from the filename" in warning for warning in parsed.warnings)
 
 
+def test_parse_resume_text_returns_reviewable_project_drafts() -> None:
+    parsed = parse_resume_text(
+        """Chloe Example
+Software Engineer
+SUMMARY
+Builds full-stack products with Python and React.
+PROJECTS
+ApplyPilot | React, FastAPI, PostgreSQL
+- Built a persistent job and application tracking workflow.
+- Developed evidence-grounded agent recommendations with Python.
+TaskForge | Java, Firebase, Android
+- Implemented scheduled task reminders for mobile users.
+EDUCATION
+Northeastern University
+""",
+        "chloe-example.pdf",
+    )
+
+    assert [project.name for project in parsed.projects] == [
+        "ApplyPilot",
+        "TaskForge",
+    ]
+    assert parsed.projects[0].technologies == [
+        "Python",
+        "React",
+        "FastAPI",
+        "PostgreSQL",
+    ]
+    assert parsed.projects[0].highlights[0].startswith("Built a persistent")
+    assert parsed.projects[1].technologies == ["Java", "Firebase", "Android"]
+
+
 def test_preview_resume_returns_draft_without_persisting_file(monkeypatch) -> None:
     monkeypatch.setattr(
         resume_extractions,
@@ -77,10 +109,11 @@ def test_preview_resume_returns_draft_without_persisting_file(monkeypatch) -> No
     assert response.status_code == 200
     body = response.json()
     assert body["source_filename"] == "chloe.pdf"
-    assert body["parser_version"] == "resume-rules-v1"
+    assert body["parser_version"] == "resume-rules-v2"
     assert body["page_count"] == 1
     assert body["profile"]["full_name"] == "Chloe Example"
     assert "Python" in body["profile"]["skills"]
+    assert body["projects"] == []
 
 
 def test_preview_resume_rejects_non_pdf_upload() -> None:
