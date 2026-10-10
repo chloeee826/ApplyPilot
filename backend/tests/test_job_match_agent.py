@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -163,6 +163,27 @@ def test_demo_agent_uses_all_stored_evidence_without_an_api_key(
         "list_candidate_projects",
     ]
     assert result.recommendation.summary.startswith("Stored evidence supports 2 of 2")
+
+
+def test_demo_agent_matches_aliases_without_conflating_java_and_javascript(
+    seeded_session: tuple[Session, Job, CandidateProfile],
+) -> None:
+    session, job, profile = seeded_session
+    analysis = session.scalar(select(JobAnalysis).where(JobAnalysis.job_id == job.id))
+    assert analysis is not None
+    analysis.skills = ["Postgres", "React.js", "Node.js", "REST API", "Java"]
+    profile.skills = ["React", "Node", "REST APIs", "JavaScript"]
+    session.commit()
+
+    result = run_demo_job_match_agent(session, job.id, profile.id)
+
+    assert result.recommendation.matched_skills == [
+        "Postgres",
+        "React.js",
+        "Node.js",
+        "REST API",
+    ]
+    assert result.recommendation.skill_gaps == ["Java"]
 
 
 def test_tool_definitions_are_strict_and_scoped() -> None:

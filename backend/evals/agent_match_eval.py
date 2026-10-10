@@ -30,6 +30,10 @@ class ProjectFixture:
 class AgentEvaluationCase:
     name: str
     category: str
+    source_company: str | None
+    source_role: str | None
+    source_url: str | None
+    accessed_on: str | None
     job_skills: tuple[str, ...]
     candidate_skills: tuple[str, ...]
     projects: tuple[ProjectFixture, ...]
@@ -64,6 +68,9 @@ class AgentEvaluationResult:
 
 
 DATASET_PATH = Path(__file__).with_name("data") / "agent_match_cases.json"
+HOLDOUT_DATASET_PATH = (
+    Path(__file__).with_name("data") / "agent_match_holdout_cases.json"
+)
 
 
 def _skill_key(value: str) -> str:
@@ -85,6 +92,10 @@ def load_cases(path: Path = DATASET_PATH) -> tuple[AgentEvaluationCase, ...]:
         AgentEvaluationCase(
             name=record["name"],
             category=record["category"],
+            source_company=record.get("source_company"),
+            source_role=record.get("source_role"),
+            source_url=record.get("source_url"),
+            accessed_on=record.get("accessed_on"),
             job_skills=tuple(record["job_skills"]),
             candidate_skills=tuple(record["candidate_skills"]),
             projects=tuple(
@@ -103,7 +114,8 @@ def load_cases(path: Path = DATASET_PATH) -> tuple[AgentEvaluationCase, ...]:
     )
 
 
-CASES = load_cases()
+DEVELOPMENT_CASES = load_cases()
+HOLDOUT_CASES = load_cases(HOLDOUT_DATASET_PATH)
 
 
 def _seed_case(db: Session, case: AgentEvaluationCase) -> tuple[Job, CandidateProfile]:
@@ -145,7 +157,7 @@ def _seed_case(db: Session, case: AgentEvaluationCase) -> tuple[Job, CandidatePr
 
 
 def evaluate_demo_agent(
-    cases: tuple[AgentEvaluationCase, ...] = CASES,
+    cases: tuple[AgentEvaluationCase, ...] = DEVELOPMENT_CASES,
 ) -> AgentEvaluationResult:
     """Evaluate the reproducible agent path against labelled match expectations."""
     engine = create_engine(
@@ -241,8 +253,8 @@ def evaluate_demo_agent(
     )
 
 
-if __name__ == "__main__":
-    result = evaluate_demo_agent()
+def print_result(label: str, result: AgentEvaluationResult) -> None:
+    print(f"split={label}")
     print(f"cases={result.cases}")
     print(
         "exact_match="
@@ -254,10 +266,19 @@ if __name__ == "__main__":
     print(f"gap_recall={result.gap_recall:.2%}")
     print(f"schema_valid={result.schema_valid_rate:.2%}")
     print(f"required_tool_completion={result.required_tool_completion_rate:.2%}")
-    print(
-        "project_evidence_grounded="
-        f"{result.project_evidence_grounded_rate:.2%} "
-        f"({result.grounded_project_evidence_items}/{result.project_evidence_items})"
-    )
+    if result.project_evidence_items:
+        print(
+            "project_evidence_grounded="
+            f"{result.project_evidence_grounded_rate:.2%} "
+            f"({result.grounded_project_evidence_items}/{result.project_evidence_items})"
+        )
+    else:
+        print("project_evidence_grounded=n/a (0/0)")
     print(f"missed_matches={dict(result.missed_matches)}")
     print(f"incorrect_gaps={dict(result.incorrect_gaps)}")
+
+
+if __name__ == "__main__":
+    print_result("development", evaluate_demo_agent(DEVELOPMENT_CASES))
+    print()
+    print_result("holdout", evaluate_demo_agent(HOLDOUT_CASES))

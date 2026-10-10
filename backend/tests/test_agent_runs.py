@@ -14,6 +14,7 @@ from app.models.job import Job
 from app.models.job_analysis import JobAnalysis
 from app.routers.agent_runs import get_agent_runner
 from app.services.job_match_agent import (
+    DEMO_AGENT_MODEL,
     AgentExecutionError,
     AgentResult,
     JobMatchRecommendation,
@@ -153,7 +154,7 @@ def test_demo_agent_run_completes_without_external_model(client: TestClient) -> 
     assert response.status_code == 201
     body = response.json()
     assert body["status"] == "completed"
-    assert body["model"] == "demo-evidence-v1"
+    assert body["model"] == DEMO_AGENT_MODEL
     assert [item["name"] for item in body["tool_trace"]] == [
         "get_job",
         "get_job_analysis",
@@ -166,7 +167,7 @@ def test_demo_agent_run_completes_without_external_model(client: TestClient) -> 
         saved = session.get(AgentRun, UUID(body["id"]))
     assert saved is not None
     assert saved.status == "completed"
-    assert saved.model == "demo-evidence-v1"
+    assert saved.model == DEMO_AGENT_MODEL
 
 
 def test_agent_run_rejects_unknown_execution_mode(client: TestClient) -> None:

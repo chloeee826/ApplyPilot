@@ -74,7 +74,22 @@ reproducible without API credits and is labelled in both the API result and UI.
 The repository includes a version-controlled agent benchmark that measures match
 precision and recall, gap detection, structured-output validity, completion of all
 four required evidence tools, and whether project-evidence statements identify a
-stored project. The dataset intentionally retains common technology-alias failures.
+stored project. On the unchanged 12-case benchmark, canonical skill normalization
+improved match recall from 82.61% to 100%, gap precision from 55.56% to 100%, and
+exact-case accuracy from 66.67% to 100%. The benchmark also verifies that Java is
+not treated as equivalent to JavaScript.
+
+A separate 12-case holdout split is derived from technology requirements on
+official company job pages and includes source URLs and access dates. It was added
+after the alias rules were implemented and is reported separately from the 12-case
+development benchmark. This supports a truthful 24-case evaluation claim, but not
+a claim that all 24 cases are independent production samples.
+
+The first untouched holdout run produced 100% match precision, 67.86% match
+recall, 65.38% gap precision, 100% gap recall, and 8.33% exact-case accuracy.
+These results must remain separate from the 100% development-set result. Project
+evidence grounding was not measurable on that run because no project-evidence
+items were produced; the CLI reports this as `n/a (0/0)` rather than 100%.
 
 This benchmark currently evaluates the deterministic agent path. Do not describe
 its results as live-model quality, real-user outcomes, or a real-job-posting study.

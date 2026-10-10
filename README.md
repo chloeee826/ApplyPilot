@@ -40,9 +40,9 @@ The repository currently contains a tested full-stack foundation with:
   mobile, platform, data, machine-learning, AI, quality, and security roles;
 - a bounded OpenAI Responses API tool-calling loop with four read-only tools
   for jobs, job analyses, candidate profiles, and project evidence;
-- a repeatable agent-quality benchmark covering schema validity, required-tool
-  completion, skill-match precision and recall, gap detection, and grounded
-  project evidence across reference-labelled job/candidate cases;
+- a repeatable agent-quality benchmark with separate development and sourced
+  holdout cases, covering schema validity, required-tool completion, skill-match
+  precision and recall, gap detection, and grounded project evidence;
 - schema-validated job-match recommendations covering matched skills, skill
   gaps, relevant project evidence, and interview focus areas;
 - persistent agent runs with running, completed, and failed states plus a tool
@@ -201,9 +201,20 @@ Run the deterministic agent-quality baseline with:
 python -m evals.agent_match_eval
 ```
 
-The agent benchmark intentionally includes skill aliases such as `Postgres` /
-`PostgreSQL`, `React.js` / `React`, and `REST API` / `REST APIs`. These cases keep
-known matching limitations visible instead of allowing a misleading perfect score.
+The agent benchmark includes aliases such as `Postgres` / `PostgreSQL`, `React.js`
+/ `React`, and `REST API` / `REST APIs`, plus the false-friend boundary `Java` /
+`JavaScript`. The initial exact-name baseline reached 82.61% match recall, 55.56%
+gap precision, and 66.67% exact-case accuracy. Versioned canonical skill
+normalization raised all three metrics to 100% on the unchanged 12-case benchmark.
+The separate holdout split contains 12 additional cases derived from technology
+requirements on official Stripe, Airbnb, MongoDB, Atlassian, and Datadog job pages.
+It stores only labelled technology combinations and source provenance, not copied
+job descriptions, and is reported separately to expose generalization gaps.
+The first untouched holdout run retained 100% match precision, gap recall,
+schema validity, and required-tool completion, while reaching 67.86% match recall,
+65.38% gap precision, and 8.33% exact-case accuracy. These lower results are kept
+as the honest generalization baseline rather than folded into the perfect
+development-set score.
 
 From the `frontend` directory:
 

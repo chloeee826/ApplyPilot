@@ -15,8 +15,19 @@ from app.models.job_analysis import JobAnalysis
 
 
 DEFAULT_AGENT_MODEL = "gpt-4o-mini"
-DEMO_AGENT_MODEL = "demo-evidence-v1"
+DEMO_AGENT_MODEL = "demo-evidence-v2"
 MAX_AGENT_STEPS = 6
+
+SKILL_ALIASES = {
+    "node": "node.js",
+    "nodejs": "node.js",
+    "postgres": "postgresql",
+    "react.js": "react",
+    "reactjs": "react",
+    "rest apis": "rest api",
+    "restful api": "rest api",
+    "restful apis": "rest api",
+}
 
 
 class AgentConfigurationError(RuntimeError):
@@ -160,7 +171,8 @@ def _execute_tool(
 
 
 def _normalized_skill(value: str) -> str:
-    return " ".join(value.lower().split())
+    normalized = " ".join(value.casefold().split())
+    return SKILL_ALIASES.get(normalized, normalized)
 
 
 def run_demo_job_match_agent(
