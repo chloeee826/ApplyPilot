@@ -69,6 +69,16 @@ real-user accuracy, or business impact.
 uses deterministic comparison logic instead of an LLM. It exists to make the MVP
 reproducible without API credits and is labelled in both the API result and UI.
 
+## Agent evaluation baseline
+
+The repository includes a version-controlled agent benchmark that measures match
+precision and recall, gap detection, structured-output validity, completion of all
+four required evidence tools, and whether project-evidence statements identify a
+stored project. The dataset intentionally retains common technology-alias failures.
+
+This benchmark currently evaluates the deterministic agent path. Do not describe
+its results as live-model quality, real-user outcomes, or a real-job-posting study.
+
 ## Not yet claimable
 
 - live job discovery or web search;

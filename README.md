@@ -40,6 +40,9 @@ The repository currently contains a tested full-stack foundation with:
   mobile, platform, data, machine-learning, AI, quality, and security roles;
 - a bounded OpenAI Responses API tool-calling loop with four read-only tools
   for jobs, job analyses, candidate profiles, and project evidence;
+- a repeatable agent-quality benchmark covering schema validity, required-tool
+  completion, skill-match precision and recall, gap detection, and grounded
+  project evidence across reference-labelled job/candidate cases;
 - schema-validated job-match recommendations covering matched skills, skill
   gaps, relevant project evidence, and interview focus areas;
 - persistent agent runs with running, completed, and failed states plus a tool
@@ -191,6 +194,16 @@ precision, 74.19% recall, and exact skill-set matches on 4 of 20 cases. The
 version-controlled benchmark intentionally includes unsupported technologies
 and a React Native ambiguity so future parser improvements can be measured
 against known gaps instead of an easy perfect score.
+
+Run the deterministic agent-quality baseline with:
+
+```bash
+python -m evals.agent_match_eval
+```
+
+The agent benchmark intentionally includes skill aliases such as `Postgres` /
+`PostgreSQL`, `React.js` / `React`, and `REST API` / `REST APIs`. These cases keep
+known matching limitations visible instead of allowing a misleading perfect score.
 
 From the `frontend` directory:
 

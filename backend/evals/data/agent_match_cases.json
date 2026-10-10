@@ -1,0 +1,124 @@
+[
+  {
+    "name": "backend_project_evidence",
+    "category": "backend",
+    "job_skills": ["Python", "FastAPI", "PostgreSQL"],
+    "candidate_skills": ["Python"],
+    "projects": [
+      {
+        "name": "API Platform",
+        "description": "A persistent backend service.",
+        "technologies": ["FastAPI", "PostgreSQL"],
+        "highlights": ["Designed transactional APIs and relational schemas."]
+      }
+    ],
+    "expected_matches": ["Python", "FastAPI", "PostgreSQL"],
+    "expected_gaps": []
+  },
+  {
+    "name": "frontend_profile_skills",
+    "category": "frontend",
+    "job_skills": ["React", "TypeScript", "CSS"],
+    "candidate_skills": ["React", "TypeScript", "CSS"],
+    "projects": [],
+    "expected_matches": ["React", "TypeScript", "CSS"],
+    "expected_gaps": []
+  },
+  {
+    "name": "platform_skill_gap",
+    "category": "platform",
+    "job_skills": ["Python", "Docker", "Kubernetes"],
+    "candidate_skills": ["Python", "Docker"],
+    "projects": [],
+    "expected_matches": ["Python", "Docker"],
+    "expected_gaps": ["Kubernetes"]
+  },
+  {
+    "name": "postgres_alias",
+    "category": "backend-alias",
+    "job_skills": ["Postgres"],
+    "candidate_skills": ["PostgreSQL"],
+    "projects": [],
+    "expected_matches": ["Postgres"],
+    "expected_gaps": []
+  },
+  {
+    "name": "react_js_alias",
+    "category": "frontend-alias",
+    "job_skills": ["React.js", "TypeScript"],
+    "candidate_skills": ["React", "TypeScript"],
+    "projects": [],
+    "expected_matches": ["React.js", "TypeScript"],
+    "expected_gaps": []
+  },
+  {
+    "name": "node_js_alias",
+    "category": "backend-alias",
+    "job_skills": ["Node.js", "JavaScript"],
+    "candidate_skills": ["Node", "JavaScript"],
+    "projects": [],
+    "expected_matches": ["Node.js", "JavaScript"],
+    "expected_gaps": []
+  },
+  {
+    "name": "case_and_whitespace_normalization",
+    "category": "normalization",
+    "job_skills": ["Python", "Machine Learning"],
+    "candidate_skills": [" python ", "machine   learning"],
+    "projects": [],
+    "expected_matches": ["Python", "Machine Learning"],
+    "expected_gaps": []
+  },
+  {
+    "name": "mobile_project_evidence",
+    "category": "mobile",
+    "job_skills": ["Java", "Android", "Firebase"],
+    "candidate_skills": ["Java"],
+    "projects": [
+      {
+        "name": "Task Manager",
+        "description": "An Android productivity application.",
+        "technologies": ["Android", "Firebase"],
+        "highlights": ["Implemented background task scheduling and cloud sync."]
+      }
+    ],
+    "expected_matches": ["Java", "Android", "Firebase"],
+    "expected_gaps": []
+  },
+  {
+    "name": "multiple_honest_gaps",
+    "category": "data",
+    "job_skills": ["Python", "Spark", "Kafka", "Airflow"],
+    "candidate_skills": ["Python"],
+    "projects": [],
+    "expected_matches": ["Python"],
+    "expected_gaps": ["Spark", "Kafka", "Airflow"]
+  },
+  {
+    "name": "java_is_not_javascript",
+    "category": "boundary",
+    "job_skills": ["Java"],
+    "candidate_skills": ["JavaScript"],
+    "projects": [],
+    "expected_matches": [],
+    "expected_gaps": ["Java"]
+  },
+  {
+    "name": "punctuation_preserved",
+    "category": "systems",
+    "job_skills": ["C++", "Linux"],
+    "candidate_skills": ["C++", "Linux"],
+    "projects": [],
+    "expected_matches": ["C++", "Linux"],
+    "expected_gaps": []
+  },
+  {
+    "name": "rest_api_plural_alias",
+    "category": "backend-alias",
+    "job_skills": ["REST API", "SQL"],
+    "candidate_skills": ["REST APIs", "SQL"],
+    "projects": [],
+    "expected_matches": ["REST API", "SQL"],
+    "expected_gaps": []
+  }
+]
