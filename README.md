@@ -41,8 +41,8 @@ The repository currently contains a tested full-stack foundation with:
 - a bounded OpenAI Responses API tool-calling loop with four read-only tools
   for jobs, job analyses, candidate profiles, and project evidence;
 - a repeatable agent-quality benchmark with separate development and sourced
-  holdout cases, covering schema validity, required-tool completion, skill-match
-  precision and recall, gap detection, and grounded project evidence;
+  validation cases, covering schema validity, required-tool completion,
+  skill-match precision and recall, gap detection, and grounded project evidence;
 - schema-validated job-match recommendations covering matched skills, skill
   gaps, relevant project evidence, and interview focus areas;
 - persistent agent runs with running, completed, and failed states plus a tool
@@ -206,15 +206,43 @@ The agent benchmark includes aliases such as `Postgres` / `PostgreSQL`, `React.j
 `JavaScript`. The initial exact-name baseline reached 82.61% match recall, 55.56%
 gap precision, and 66.67% exact-case accuracy. Versioned canonical skill
 normalization raised all three metrics to 100% on the unchanged 12-case benchmark.
-The separate holdout split contains 12 additional cases derived from technology
+The comparison rules live in the reusable, explicitly versioned `skills-v2`
+ontology instead of being embedded in UI or request code.
+The separate validation split contains 12 additional cases derived from technology
 requirements on official Stripe, Airbnb, MongoDB, Atlassian, and Datadog job pages.
 It stores only labelled technology combinations and source provenance, not copied
-job descriptions, and is reported separately to expose generalization gaps.
-The first untouched holdout run retained 100% match precision, gap recall,
+job descriptions, and is reported separately. Its first run was an untouched
+holdout baseline that retained 100% match precision, gap recall,
 schema validity, and required-tool completion, while reaching 67.86% match recall,
-65.38% gap precision, and 8.33% exact-case accuracy. These lower results are kept
-as the honest generalization baseline rather than folded into the perfect
-development-set score.
+65.38% gap precision, and 8.33% exact-case accuracy. After those observed failures
+informed the versioned v3 skill ontology, the split became validation data and
+reached 100% match recall, gap precision, and exact-case accuracy. A new unseen
+split is required before making a final generalization claim.
+
+Blind v1 freezes 12 further cases from 12 previously unused official company job
+pages before running `demo-evidence-v3`. The preserved first run achieved 100%
+match precision, 87.50% match recall, 100% gap recall, and 41.67% exact-case
+accuracy. Its misses (`NextJS`, `NestJS`, `Google Cloud Platform`, `PydanticAI`,
+`TanStack Query`, and `Apollo Client`) remain visible rather than being patched
+before reporting. The frozen dataset SHA-256 and historical result are stored under
+`backend/evals/results/` so later matcher versions cannot overwrite the baseline.
+
+After review of those failures, `demo-evidence-v4` / `skills-v2` adds four
+unambiguous spelling aliases: NextJS, NestJS, Google Cloud Platform, and PydanticAI.
+The former blind split is now validation data. On the identical frozen dataset,
+match recall increases from 87.50% to 97.50% (+10 percentage points), precision
+remains 100%, gap precision increases to 84.62%, and exact cases increase from
+5/12 to 10/12. Apollo/Apollo Client and React Query/TanStack Query remain distinct
+because a product family or framework-independent library name may not establish
+the specific required skill. These cases retain their original labels for historical
+comparability, but are flagged as ambiguous; they need annotation review before
+being reused for a future independent quality claim.
+
+The CLI reports both current matcher versions and recall change against the saved
+baseline, checking the frozen dataset hash first. Source-derived job technology
+lists are paired with authored synthetic candidate fixtures; these are small,
+developer-curated tests of deterministic matching, not an unbiased estimate of
+end-to-end real-user or live-model performance.
 
 From the `frontend` directory:
 

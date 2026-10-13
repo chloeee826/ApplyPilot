@@ -219,7 +219,7 @@ export function AgentWorkspace({
               <div className="agent-result-heading">
                 <div>
                   <p className="agent-result-label">
-                    {activeRun.model === 'demo-evidence-v1'
+                    {activeRun.model.startsWith('demo-evidence-v')
                       ? 'Deterministic demo result'
                       : 'Latest selected run'}
                   </p>

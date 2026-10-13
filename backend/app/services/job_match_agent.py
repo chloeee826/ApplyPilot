@@ -12,22 +12,12 @@ from sqlalchemy.orm import Session
 from app.models.candidate import CandidateProfile, CandidateProject
 from app.models.job import Job
 from app.models.job_analysis import JobAnalysis
+from app.services.skill_ontology import canonicalize_skill
 
 
 DEFAULT_AGENT_MODEL = "gpt-4o-mini"
-DEMO_AGENT_MODEL = "demo-evidence-v2"
+DEMO_AGENT_MODEL = "demo-evidence-v4"
 MAX_AGENT_STEPS = 6
-
-SKILL_ALIASES = {
-    "node": "node.js",
-    "nodejs": "node.js",
-    "postgres": "postgresql",
-    "react.js": "react",
-    "reactjs": "react",
-    "rest apis": "rest api",
-    "restful api": "rest api",
-    "restful apis": "rest api",
-}
 
 
 class AgentConfigurationError(RuntimeError):
@@ -170,11 +160,6 @@ def _execute_tool(
     raise AgentExecutionError(f"Unknown agent tool: {name}")
 
 
-def _normalized_skill(value: str) -> str:
-    normalized = " ".join(value.casefold().split())
-    return SKILL_ALIASES.get(normalized, normalized)
-
-
 def run_demo_job_match_agent(
     db: Session,
     job_id: UUID,
@@ -216,29 +201,29 @@ def run_demo_job_match_agent(
     job_skills = [str(skill) for skill in analysis["skills"]]
     candidate_skills = [str(skill) for skill in profile["skills"]]
     projects = list(projects_output["projects"])
-    evidence_skill_keys = {_normalized_skill(skill) for skill in candidate_skills}
+    evidence_skill_keys = {canonicalize_skill(skill) for skill in candidate_skills}
 
     for project in projects:
         evidence_skill_keys.update(
-            _normalized_skill(str(technology))
+            canonicalize_skill(str(technology))
             for technology in project["technologies"]
         )
 
     matched_skills = [
-        skill for skill in job_skills if _normalized_skill(skill) in evidence_skill_keys
+        skill for skill in job_skills if canonicalize_skill(skill) in evidence_skill_keys
     ]
     skill_gaps = [
-        skill for skill in job_skills if _normalized_skill(skill) not in evidence_skill_keys
+        skill for skill in job_skills if canonicalize_skill(skill) not in evidence_skill_keys
     ]
 
     project_evidence: list[str] = []
     for project in projects:
         technology_keys = {
-            _normalized_skill(str(technology))
+            canonicalize_skill(str(technology))
             for technology in project["technologies"]
         }
         supported_skills = [
-            skill for skill in job_skills if _normalized_skill(skill) in technology_keys
+            skill for skill in job_skills if canonicalize_skill(skill) in technology_keys
         ]
         if not supported_skills:
             continue

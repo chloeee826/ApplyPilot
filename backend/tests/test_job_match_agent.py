@@ -186,6 +186,40 @@ def test_demo_agent_matches_aliases_without_conflating_java_and_javascript(
     assert result.recommendation.skill_gaps == ["Java"]
 
 
+def test_demo_agent_matches_skill_ontology_aliases(
+    seeded_session: tuple[Session, Job, CandidateProfile],
+) -> None:
+    session, job, profile = seeded_session
+    analysis = session.scalar(select(JobAnalysis).where(JobAnalysis.job_id == job.id))
+    assert analysis is not None
+    analysis.skills = [
+        "AWS",
+        "Kubernetes",
+        "TypeScript",
+        "MongoDB",
+        "Go",
+        "C#",
+        "EC2",
+        "Argo CD",
+    ]
+    profile.skills = [
+        "Amazon Web Services",
+        "K8s",
+        "TS",
+        "Mongo",
+        "Golang",
+        "C Sharp",
+        "Amazon EC2",
+        "ArgoCD",
+    ]
+    session.commit()
+
+    result = run_demo_job_match_agent(session, job.id, profile.id)
+
+    assert result.recommendation.matched_skills == analysis.skills
+    assert result.recommendation.skill_gaps == []
+
+
 def test_tool_definitions_are_strict_and_scoped() -> None:
     assert {tool["name"] for tool in AGENT_TOOLS} == {
         "get_job",

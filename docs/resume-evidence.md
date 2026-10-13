@@ -79,7 +79,7 @@ improved match recall from 82.61% to 100%, gap precision from 55.56% to 100%, an
 exact-case accuracy from 66.67% to 100%. The benchmark also verifies that Java is
 not treated as equivalent to JavaScript.
 
-A separate 12-case holdout split is derived from technology requirements on
+A separate 12-case evaluation split is derived from technology requirements on
 official company job pages and includes source URLs and access dates. It was added
 after the alias rules were implemented and is reported separately from the 12-case
 development benchmark. This supports a truthful 24-case evaluation claim, but not
@@ -90,6 +90,34 @@ recall, 65.38% gap precision, 100% gap recall, and 8.33% exact-case accuracy.
 These results must remain separate from the 100% development-set result. Project
 evidence grounding was not measurable on that run because no project-evidence
 items were produced; the CLI reports this as `n/a (0/0)` rather than 100%.
+
+Those observed failures then informed the versioned `demo-evidence-v3` ontology,
+so this split is validation data for v3 rather than an untouched holdout. V3 reaches
+100% match recall, gap precision, and exact-case accuracy on both development and
+validation. Do not present that result as blind-test performance; a new unseen split
+is required for a final generalization claim.
+
+Canonicalization was introduced in the reusable `skills-v1` ontology with
+focused tests for both known aliases and false-friend boundaries. The deterministic
+agent version was `demo-evidence-v3` so stored v3 results can be distinguished from
+recommendations created by earlier matching rules.
+
+Blind v1 adds 12 frozen cases from 12 companies not used by the earlier sourced
+split. Labels were completed before the first `demo-evidence-v3` run, and the
+dataset hash plus first-run result are preserved as a versioned artifact. The blind
+result reached 100% match precision, 87.50% match recall, 100% gap recall, 52.38%
+gap precision, and 41.67% exact-case accuracy. This supports an honest claim that
+the project includes a 36-case evaluation harness with a separately reported
+12-case blind split; it does not support a claim of perfect generalization.
+
+Phase 25 upgrades to `skills-v2` / `demo-evidence-v4`. Four safe alias groups
+raise match recall from 87.50% to 97.50% (+10 percentage points) on the same
+12-case dataset, while retaining 100% precision. Gap precision becomes 84.62%
+and exact-case accuracy becomes 10/12 (83.33%). This is a post-tuning validation
+comparison, not a new blind result. The Apollo and TanStack Query labels are
+ambiguous and remain unmerged pending annotation review. Candidate fixtures were
+authored by the developer; neither company separation nor a hash alone proves an
+unbiased estimate of generalization.
 
 This benchmark currently evaluates the deterministic agent path. Do not describe
 its results as live-model quality, real-user outcomes, or a real-job-posting study.

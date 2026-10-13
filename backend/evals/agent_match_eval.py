@@ -1,4 +1,5 @@
 import json
+import hashlib
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,10 +13,12 @@ from app.models.candidate import CandidateProfile, CandidateProject
 from app.models.job import Job
 from app.models.job_analysis import JobAnalysis
 from app.services.job_match_agent import (
+    DEMO_AGENT_MODEL,
     REQUIRED_TOOL_NAMES,
     JobMatchRecommendation,
     run_demo_job_match_agent,
 )
+from app.services.skill_ontology import SKILL_ONTOLOGY_VERSION
 
 
 @dataclass(frozen=True)
@@ -71,6 +74,9 @@ DATASET_PATH = Path(__file__).with_name("data") / "agent_match_cases.json"
 HOLDOUT_DATASET_PATH = (
     Path(__file__).with_name("data") / "agent_match_holdout_cases.json"
 )
+BLIND_V1_DATASET_PATH = (
+    Path(__file__).with_name("data") / "agent_match_blind_v1_cases.json"
+)
 
 
 def _skill_key(value: str) -> str:
@@ -115,7 +121,12 @@ def load_cases(path: Path = DATASET_PATH) -> tuple[AgentEvaluationCase, ...]:
 
 
 DEVELOPMENT_CASES = load_cases()
-HOLDOUT_CASES = load_cases(HOLDOUT_DATASET_PATH)
+# This split was an untouched holdout for the Phase 22 baseline. Once its observed
+# failures informed v3 alias rules, it became a validation set for later versions.
+VALIDATION_CASES = load_cases(HOLDOUT_DATASET_PATH)
+# Originally held out for v3; observed failures now inform v4 validation.
+# Keep the historical name and bytes to preserve the frozen dataset hash.
+BLIND_V1_CASES = load_cases(BLIND_V1_DATASET_PATH)
 
 
 def _seed_case(db: Session, case: AgentEvaluationCase) -> tuple[Job, CandidateProfile]:
@@ -279,6 +290,18 @@ def print_result(label: str, result: AgentEvaluationResult) -> None:
 
 
 if __name__ == "__main__":
+    print(f"agent_version={DEMO_AGENT_MODEL}")
+    print(f"skill_ontology_version={SKILL_ONTOLOGY_VERSION}")
     print_result("development", evaluate_demo_agent(DEVELOPMENT_CASES))
     print()
-    print_result("holdout", evaluate_demo_agent(HOLDOUT_CASES))
+    print_result("validation", evaluate_demo_agent(VALIDATION_CASES))
+    print()
+    current = evaluate_demo_agent(BLIND_V1_CASES)
+    print_result("former-blind-v1-validation", current)
+    baseline_path = Path(__file__).with_name("results") / "agent_match_blind_v1_baseline.json"
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    if hashlib.sha256(BLIND_V1_DATASET_PATH.read_bytes()).hexdigest() != baseline["dataset_sha256"]:
+        raise ValueError("Frozen dataset hash does not match the historical baseline")
+    print(f"historical_baseline_agent={baseline['agent_version']}")
+    print(f"historical_baseline_match_recall={baseline['match_recall']:.2%}")
+    print(f"match_recall_change_pp={(current.match_recall - baseline['match_recall']) * 100:.2f}")

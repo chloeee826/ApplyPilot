@@ -1,0 +1,22 @@
+{
+  "recorded_on": "2026-10-09",
+  "dataset": "agent_match_blind_v1_cases.json",
+  "dataset_sha256": "b68057db3f9369abd5aaeb54fbbefe7733d6f4eb25d79d57d0bbe2c70dc361b4",
+  "evaluation_role": "post-tuning-validation",
+  "agent_version": "demo-evidence-v4",
+  "skill_ontology_version": "skills-v2",
+  "baseline_artifact": "agent_match_blind_v1_baseline.json",
+  "cases": 12,
+  "exact_match_cases": 10,
+  "exact_match_rate": 0.8333333333333334,
+  "match_precision": 1.0,
+  "match_recall": 0.975,
+  "match_recall_change_percentage_points": 10.0,
+  "gap_precision": 0.8461538461538461,
+  "gap_recall": 1.0,
+  "schema_valid_rate": 1.0,
+  "required_tool_completion_rate": 1.0,
+  "project_evidence_grounded": null,
+  "missed_matches": {"react query": 1, "apollo": 1},
+  "notes": "Observed v3 failures informed v4. Two ambiguous labels remain unmerged. Synthetic candidate fixtures and reference job skill lists evaluate deterministic matching only."
+}

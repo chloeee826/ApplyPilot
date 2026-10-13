@@ -1,0 +1,28 @@
+{
+  "recorded_on": "2026-10-09",
+  "dataset": "agent_match_blind_v1_cases.json",
+  "dataset_sha256": "b68057db3f9369abd5aaeb54fbbefe7733d6f4eb25d79d57d0bbe2c70dc361b4",
+  "agent_version": "demo-evidence-v3",
+  "skill_ontology_version": "skills-v1",
+  "labels_frozen_before_first_run": true,
+  "cases": 12,
+  "source_companies": 12,
+  "exact_match_cases": 5,
+  "exact_match_rate": 0.4167,
+  "match_precision": 1.0,
+  "match_recall": 0.875,
+  "gap_precision": 0.5238,
+  "gap_recall": 1.0,
+  "schema_valid_rate": 1.0,
+  "required_tool_completion_rate": 1.0,
+  "project_evidence_grounded": null,
+  "missed_matches": {
+    "next.js": 5,
+    "nest.js": 1,
+    "gcp": 1,
+    "pydantic ai": 1,
+    "react query": 1,
+    "apollo": 1
+  },
+  "notes": "Historical first-run result. Do not overwrite after matcher changes; create a new versioned result instead."
+}
