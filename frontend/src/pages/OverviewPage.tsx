@@ -49,7 +49,7 @@ export function OverviewPage({
     {
       title: 'Generate a match strategy',
       description: 'Use saved evidence to identify matches, gaps, and interview focus.',
-      complete: completedRuns.length > 0,
+      complete: completedRuns.some((run) => run.context_status === 'unchanged'),
       to: '/agent',
     },
   ]

@@ -1,4 +1,5 @@
-import type { FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
+import { JobEditor } from '../components/JobEditor'
 
 import { PageGuide } from '../components/PageGuide'
 import type { Application, ApplicationStatus } from '../types/application'
@@ -23,6 +24,7 @@ interface JobsPageProps {
   isSubmitting: boolean
   jobs: Job[]
   onAnalyzeJob: (jobId: string) => Promise<void>
+  onEditJob: (jobId: string, values: JobCreate) => Promise<void>
   onFieldChange: (field: keyof JobCreate, value: string) => void
   onStatusChange: (
     applicationId: string,
@@ -41,11 +43,23 @@ export function JobsPage({
   isSubmitting,
   jobs,
   onAnalyzeJob,
+  onEditJob,
   onFieldChange,
   onStatusChange,
   onSubmit,
   updatingApplicationId,
 }: JobsPageProps) {
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [page, setPage] = useState(0)
+  const filtered = jobs.filter((job) => {
+    const application = applications.find((item) => item.job_id === job.id)
+    const text = `${job.company_name} ${job.title} ${job.location ?? ''}`.toLowerCase()
+    return text.includes(query.trim().toLowerCase()) && (statusFilter === 'all' || application?.status === statusFilter)
+  })
+  const pages = Math.max(1, Math.ceil(filtered.length / 5))
+  const activePage = Math.min(page, pages - 1)
+  const visible = filtered.slice(activePage * 5, activePage * 5 + 5)
   return (
     <>
       <header className="page-header">
@@ -142,6 +156,16 @@ export function JobsPage({
             <span className="job-count">{jobs.length}</span>
           </div>
 
+          <div className="job-filters">
+            <label>Search saved jobs<input type="search" placeholder="Company, role, or location" value={query}
+              onChange={(event) => { setQuery(event.target.value); setPage(0) }} /></label>
+            <label>Filter by status<select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(0) }}>
+              <option value="all">All statuses</option>
+              {applicationStatuses.map((value) => <option key={value} value={value}>{value}</option>)}
+            </select></label>
+          </div>
+          {!isLoading && jobs.length > 0 && filtered.length === 0 && <p className="empty-state">No jobs match these filters. Try another search or status.</p>}
+
           {isLoading && <p className="empty-state">Loading saved jobs…</p>}
 
           {!isLoading && jobs.length === 0 && (
@@ -152,7 +176,7 @@ export function JobsPage({
           )}
 
           <div className="job-list">
-            {jobs.map((job) => {
+            {visible.map((job) => {
               const application = applications.find(
                 (candidate) => candidate.job_id === job.id,
               )
@@ -195,6 +219,7 @@ export function JobsPage({
                     </label>
                   )}
                   <p className="job-description">{job.description}</p>
+                  <JobEditor job={job} onSave={onEditJob} />
                   <button
                     className="analysis-button"
                     type="button"
@@ -259,6 +284,11 @@ export function JobsPage({
               )
             })}
           </div>
+          {filtered.length > 0 && <nav className="job-pagination" aria-label="Saved job pages">
+            <button className="analysis-button" disabled={activePage === 0} onClick={() => setPage(activePage - 1)}>Previous page</button>
+            <span aria-live="polite">Page {activePage + 1} of {pages} · {filtered.length} matching jobs</span>
+            <button className="analysis-button" disabled={activePage + 1 >= pages} onClick={() => setPage(activePage + 1)}>Next page</button>
+          </nav>}
         </section>
       </section>
     </>

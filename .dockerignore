@@ -8,5 +8,8 @@ backend/.env
 backend/.venv
 frontend/dist
 frontend/node_modules
+frontend/test-results
+frontend/playwright-report
+frontend/e2e
 *.log
 .DS_Store

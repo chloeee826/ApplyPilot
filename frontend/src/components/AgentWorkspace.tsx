@@ -55,15 +55,15 @@ export function AgentWorkspace({
   const [isRunning, setIsRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const effectiveJobId = selectedJobId || jobs[0]?.id || ''
-  const effectiveProfileId = selectedProfileId || profiles[0]?.id || ''
-  const selectedAnalysis = analyses.find(
-    (analysis) => analysis.job_id === effectiveJobId,
-  )
   const activeRun = useMemo(
     () => runs.find((run) => run.id === activeRunId) ?? runs[0] ?? null,
     [activeRunId, runs],
   )
+  const effectiveJobId = selectedJobId || activeRun?.job_id || jobs[0]?.id || ''
+  const effectiveProfileId = selectedProfileId || activeRun?.profile_id || profiles[0]?.id || ''
+  const selectedAnalysis = analyses.find((analysis) => analysis.job_id === effectiveJobId)
+  const reportJob = activeRun?.tool_trace.find((tool) => tool.name === 'get_job')?.output
+  const reportTitle = typeof reportJob?.title === 'string' ? reportJob.title : jobs.find((job) => job.id === activeRun?.job_id)?.title
 
   async function handleRun(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -224,6 +224,7 @@ export function AgentWorkspace({
                       : 'Latest selected run'}
                   </p>
                   <h3>{activeRun.status === 'completed' ? 'Recommendation' : 'Run details'}</h3>
+                  <p>Report for {reportTitle ?? 'saved role'} · {new Date(activeRun.created_at).toLocaleString()}</p>
                 </div>
                 <span className={`run-status run-status-${activeRun.status}`}>
                   {activeRun.status}
@@ -238,13 +239,72 @@ export function AgentWorkspace({
               ) : (
                 <>
                   <p className="agent-summary">{activeRun.summary}</p>
+                  {activeRun.context_status === 'changed' && (
+                    <p className="report-context-notice" role="status">
+                      Your saved evidence or job requirements have changed since this report.
+                      {' '}Review the current profile and <Link to="/jobs">job analysis</Link>, then generate a new report.
+                      {' '}The details below preserve the original snapshot.
+                    </p>
+                  )}
+                  {activeRun.context_status === 'unavailable' && <p className="report-context-notice">
+                    This older report has incomplete snapshots. Freshness could not be checked.
+                  </p>}
                   <div className="agent-result-grid">
-                    <ResultList
-                      title="Matched skills"
-                      items={activeRun.matched_skills}
-                      emptyMessage="No supported matches were returned."
-                      tone="positive"
-                    />
+                    <section className="agent-result-group result-positive">
+                      <h4>Matched skills · supporting sources</h4>
+                      <p>Saved at run time. Profile skills are self-reported.</p>
+                      {activeRun.matched_skills.length === 0 ? (
+                        <p>No supported matches were returned.</p>
+                      ) : (
+                        <ul>
+                          {activeRun.matched_skills.map((skill) => {
+                            const sources = activeRun.matched_skill_evidence?.find(
+                              (item) => item.skill === skill,
+                            )?.sources ?? []
+                            return (
+                              <li key={skill}>
+                                <strong>{skill}</strong>
+                                {sources.length === 0 ? (
+                                  <span className="skill-source-missing">No supporting source found in this run.</span>
+                                ) : (
+                                  <ul className="skill-source-list">
+                                    {sources.map((source, index) => (
+                                      <li key={`${source.source_id}-${index}`}>
+                                        <details className="evidence-details">
+                                          <summary>
+                                            {source.source_type === 'profile' ? 'Profile' : 'Project'}
+                                            {' · '}{source.source_name}{' · “'}{source.original_skill}{'”'}
+                                          </summary>
+                                          <div className="evidence-snapshot">
+                                            <p>Saved with this report. This is user-provided evidence.</p>
+                                            {source.description ? <p>{source.description}</p> : (
+                                              <p>No description was saved for this source.</p>
+                                            )}
+                                            {(source.technologies?.length ?? 0) > 0 && (
+                                              <p><strong>{source.source_type === 'profile' ? 'Listed skills' : 'Project technologies'}:</strong>
+                                                {' '}{source.technologies?.join(', ')}
+                                              </p>
+                                            )}
+                                            {source.highlights && source.highlights.length > 0 && (
+                                              <ul>
+                                                {source.highlights.map((highlight, highlightIndex) => (
+                                                  <li key={highlightIndex}>{highlight}</li>
+                                                ))}
+                                              </ul>
+                                            )}
+                                          </div>
+                                        </details>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      )}
+                      <p>Expand a source to review its saved details. Sources matched using {activeRun.evidence_ontology_version ?? 'unavailable rules'}.</p>
+                    </section>
                     <ResultList
                       title="Skill gaps"
                       items={activeRun.skill_gaps}
@@ -286,7 +346,11 @@ export function AgentWorkspace({
                       key={run.id}
                       type="button"
                       className={run.id === activeRun?.id ? 'active' : ''}
-                      onClick={() => setActiveRunId(run.id)}
+                      onClick={() => {
+                        setActiveRunId(run.id)
+                        setSelectedJobId(run.job_id)
+                        setSelectedProfileId(run.profile_id)
+                      }}
                     >
                       <span>{job ? `${job.company_name} · ${job.title}` : 'Saved run'}</span>
                       <small>{run.status}</small>

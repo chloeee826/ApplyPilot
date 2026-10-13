@@ -65,7 +65,7 @@ real-user accuracy, or business impact.
 
 ## Demo-mode boundary
 
-`demo-evidence-v1` runs the same database evidence tools and persistence path but
+The versioned `demo-evidence-v*` runner uses the same database evidence tools and persistence path but
 uses deterministic comparison logic instead of an LLM. It exists to make the MVP
 reproducible without API credits and is labelled in both the API result and UI.
 
@@ -121,6 +121,26 @@ unbiased estimate of generalization.
 
 This benchmark currently evaluates the deterministic agent path. Do not describe
 its results as live-model quality, real-user outcomes, or a real-job-posting study.
+
+## Inspectable source evidence
+
+Phase 26 adds per-skill source annotations to AgentRun responses and the agent
+workspace. Sources reference the profile/project ID, name, and original technology
+label in the persisted tool trace, rather than current candidate records. A test
+changes the profile after execution and verifies unchanged evidence through separate
+GET and list requests. Annotations use the current ontology version, exposed in
+the response, and do not validate candidate proficiency or historical model reasoning.
+Missing trace support is shown explicitly. No new live-model quality claim is implied.
+
+Phases 27–29 add expandable description/technology/highlight snapshots, report
+freshness checks against current inputs, job editing, search/filtering, and pagination.
+`frontend/e2e/workspace.spec.ts` verifies a real synthetic PDF through the browser
+and production extractor, review before saving, atomic import, deterministic agent
+execution, stale-report regeneration, and refresh persistence. Additional browser
+checks cover 102 saved jobs, invalid uploads, failed model configuration, network
+failure, and a 390px viewport. Local verification: 5 Chromium journey checks passed.
+These use SQLite for isolation; PostgreSQL and Docker are separate verification
+boundaries. No successful live LLM execution is claimed.
 
 ## Not yet claimable
 

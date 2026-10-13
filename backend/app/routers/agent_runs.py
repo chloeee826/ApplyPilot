@@ -22,6 +22,8 @@ from app.services.job_match_agent import (
     AgentResult,
     run_demo_job_match_agent,
     run_job_match_agent,
+    _execute_tool,
+    REQUIRED_TOOL_NAMES,
 )
 
 
@@ -34,12 +36,37 @@ def get_agent_runner() -> AgentRunner:
     return run_job_match_agent
 
 
+def read_run(db: Session, record: AgentRun, cache: dict | None = None) -> AgentRunRead:
+    """Compare stored snapshots to current inputs without rewriting the report."""
+    result = AgentRunRead.model_validate(record)
+    snapshots = {
+        item.get("name"): item.get("output") for item in record.tool_trace
+        if item.get("name") in REQUIRED_TOOL_NAMES and isinstance(item.get("output"), dict)
+    }
+    if record.status != "completed" or set(snapshots) != REQUIRED_TOOL_NAMES:
+        return result
+    cache = cache if cache is not None else {}
+    changed = []
+    for name in sorted(REQUIRED_TOOL_NAMES):
+        key = (record.job_id, record.profile_id, name)
+        if key not in cache:
+            try:
+                cache[key] = _execute_tool(name, db=db, job_id=record.job_id, profile_id=record.profile_id)
+            except AgentExecutionError:
+                cache[key] = None
+        if cache[key] != snapshots[name]:
+            changed.append(name)
+    result.context_status = "changed" if changed else "unchanged"
+    result.changed_sources = changed
+    return result
+
+
 @router.post("", response_model=AgentRunRead, status_code=status.HTTP_201_CREATED)
 def create_agent_run(
     request: AgentRunCreate,
     db: Annotated[Session, Depends(get_db)],
     runner: Annotated[AgentRunner, Depends(get_agent_runner)],
-) -> AgentRun:
+) -> AgentRunRead:
     if db.get(Job, request.job_id) is None:
         raise HTTPException(status_code=404, detail="Job not found")
     if db.get(CandidateProfile, request.profile_id) is None:
@@ -96,7 +123,7 @@ def create_agent_run(
     record.completed_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(record)
-    return record
+    return read_run(db, record)
 
 
 @router.get("", response_model=list[AgentRunRead])
@@ -104,22 +131,23 @@ def list_agent_runs(
     db: Annotated[Session, Depends(get_db)],
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
-) -> list[AgentRun]:
+) -> list[AgentRunRead]:
     statement = (
         select(AgentRun)
         .order_by(AgentRun.created_at.desc(), AgentRun.id)
         .offset(offset)
         .limit(limit)
     )
-    return list(db.scalars(statement).all())
+    cache: dict = {}
+    return [read_run(db, record, cache) for record in db.scalars(statement).all()]
 
 
 @router.get("/{run_id}", response_model=AgentRunRead)
 def get_agent_run(
     run_id: UUID,
     db: Annotated[Session, Depends(get_db)],
-) -> AgentRun:
+) -> AgentRunRead:
     record = db.get(AgentRun, run_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Agent run not found")
-    return record
+    return read_run(db, record)

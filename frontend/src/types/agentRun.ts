@@ -21,6 +21,19 @@ export interface AgentRun {
   model: string
   summary: string | null
   matched_skills: string[]
+  matched_skill_evidence?: {
+    skill: string
+    sources: {
+      source_type: 'profile' | 'project'
+      source_id: string
+      source_name: string
+      original_skill: string
+      description?: string | null
+      technologies?: string[]
+      highlights?: string[]
+    }[]
+  }[]
+  evidence_ontology_version?: string
   skill_gaps: string[]
   project_evidence: string[]
   interview_focus: string[]
@@ -28,4 +41,6 @@ export interface AgentRun {
   error: string | null
   created_at: string
   completed_at: string | null
+  context_status?: 'unchanged' | 'changed' | 'unavailable'
+  changed_sources?: string[]
 }

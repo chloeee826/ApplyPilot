@@ -222,3 +222,6 @@ node_modules/
 .DS_Store
 .idea/
 .vscode/
+.e2e-cache/
+frontend/test-results/
+frontend/playwright-report/

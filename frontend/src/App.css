@@ -1341,6 +1341,58 @@ select:focus {
   background: rgba(222, 229, 212, 0.72);
 }
 
+.skill-source-missing {
+  display: block;
+  color: #755525;
+  margin-top: 0.3rem;
+}
+
+.job-filters, .job-pagination, .job-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 1rem 0;
+}
+.job-filters label { flex: 1 1 180px; }
+.job-filters input, .job-filters select, .job-edit-form input, .job-edit-form textarea {
+  display: block;
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid #8eaccd;
+  border-radius: 0.5rem;
+  margin-top: 0.4rem;
+  font: inherit;
+  background: #fff;
+}
+.job-edit-form { margin: 1rem 0; padding: 1rem; background: #fef9d9; border-radius: 0.7rem; }
+.job-edit-form label { display: block; margin: 0.75rem 0; }
+.report-context-notice { background: #fef9d9; padding: 1rem; border-left: 3px solid #8eaccd; border-radius: 0.5rem; }
+
+.evidence-details summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.evidence-details summary:focus-visible {
+  outline: 2px solid #8eaccd;
+  outline-offset: 3px;
+}
+
+.evidence-snapshot {
+  margin-top: 0.6rem;
+  padding: 0.75rem;
+  border-left: 3px solid #8eaccd;
+  background: #fef9d9;
+  border-radius: 0.35rem;
+  overflow-wrap: anywhere;
+}
+
+.agent-result-group .skill-source-list {
+  margin-top: 0.3rem;
+  padding-left: 1rem;
+}
+
 .agent-result-group.result-gap {
   border-color: #e4b9b3;
   background: rgba(255, 241, 239, 0.78);

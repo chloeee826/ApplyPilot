@@ -4,6 +4,24 @@ ApplyPilot is an agentic job search MVP for application tracking, evidence-backe
 role analysis, and interview preparation. It uses React, TypeScript, FastAPI,
 PostgreSQL, and an optional OpenAI tool-calling workflow.
 
+## Local portfolio demo
+
+With Docker Desktop running, from the repository root:
+
+```bash
+docker compose up --build -d
+docker compose exec app python -m scripts.seed_demo
+```
+
+Open **http://127.0.0.1:8008**. This is the complete product, not just the API.
+The Compose database uses a named volume and loopback-only ports. Demo mode has
+zero model API cost. `docker compose down` stops this workspace while preserving
+its volume. Do not use `down -v` if you want to keep your records. These are local
+demo credentials; this configuration is not a public multi-user deployment.
+
+See [the five-minute demo and release checklist](docs/demo.md) for a walkthrough,
+verification commands, known limitations, and interview explanations.
+
 ## Current status
 
 The repository currently contains a tested full-stack foundation with:
@@ -11,6 +29,8 @@ The repository currently contains a tested full-stack foundation with:
 - a FastAPI `GET /health` liveness endpoint;
 - a validated `POST /jobs` endpoint;
 - paginated job listing, detail retrieval, and partial updates;
+- saved-role editing, company/title/location search, status filtering, and five-card
+  UI pages; shared workspace loading follows all bounded API pages;
 - SQLAlchemy job persistence in PostgreSQL;
 - isolated unit tests and an opt-in PostgreSQL integration test;
 - a React and TypeScript frontend;
@@ -47,6 +67,12 @@ The repository currently contains a tested full-stack foundation with:
   gaps, relevant project evidence, and interview focus areas;
 - persistent agent runs with running, completed, and failed states plus a tool
   trace that makes each evidence lookup inspectable;
+- per-skill supporting profile/project sources derived from persisted run snapshots,
+  preserving original technology labels and identifying matches with missing support;
+- expandable source details showing saved profile summaries or project descriptions,
+  technologies, and highlights without navigating away from the recommendation;
+- report freshness checks comparing stored snapshots with current job, analysis,
+  profile, and project data, while preserving the original report;
 - API endpoints for starting, listing, and retrieving agent runs;
 - a React agent workspace for selecting analyzed jobs and candidate profiles,
   starting runs, and reviewing matched skills, gaps, project evidence, interview
@@ -169,6 +195,31 @@ Never bake `.env` into the image. `.dockerignore` excludes local secrets,
 virtual environments, caches, `node_modules`, and previously generated builds.
 
 ## Run the tests
+
+Browser journey checks use an isolated temporary SQLite database and a real
+synthetic text-layer PDF. They never load your `.env`, use your personal workspace,
+or call OpenAI. Install the browser once, then run:
+
+```bash
+cd frontend
+npm ci
+npx playwright install chromium
+npm run test:e2e
+```
+
+Tests start their own backend on `8011` and frontend on `5181` and stop them on
+completion. These ports must be free. The five sequential journey checks cover
+PDF review/import, job editing and stale reports, persistence after refresh,
+102-record pagination and filtering, invalid uploads, failed agent mode, network
+failure, and mobile source disclosure. They are one shared synthetic workspace,
+not five independent real-user trials. HTML results are written to
+`frontend/playwright-report` and failure traces/screenshots to
+`frontend/test-results`, both ignored by Git.
+
+`.github/workflows/verify.yml` runs backend tests with a dedicated PostgreSQL
+service, frontend build/lint, and Chromium journey checks on pushes and PRs.
+Workflow configuration is implemented; a successful remote CI run is only
+claimable after it actually runs on GitHub.
 
 From the `backend` directory:
 

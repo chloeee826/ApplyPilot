@@ -6,11 +6,10 @@ import type {
   CandidateProjectCreate,
   ResumeExtraction,
 } from '../types/candidate'
-import { parseResponse } from './client'
+import { listAllPages, parseResponse } from './client'
 
 export async function listProfiles(): Promise<CandidateProfile[]> {
-  const response = await fetch('/api/profiles')
-  return parseResponse<CandidateProfile[]>(response)
+  return listAllPages<CandidateProfile>('/api/profiles')
 }
 
 export async function createProfile(

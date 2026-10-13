@@ -33,6 +33,7 @@ interface ProjectForm {
 
 interface CandidateProfilePanelProps {
   onProfileSaved?: (profile: CandidateProfile) => void
+  onEvidenceChanged?: () => void
 }
 
 const emptyProfileForm: ProfileForm = {
@@ -81,7 +82,7 @@ function projectToForm(project: CandidateProjectCreate): ProjectForm {
   }
 }
 
-export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelProps) {
+export function CandidateProfilePanel({ onProfileSaved, onEvidenceChanged }: CandidateProfilePanelProps) {
   const [profile, setProfile] = useState<CandidateProfile | null>(null)
   const [projects, setProjects] = useState<CandidateProject[]>([])
   const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfileForm)
@@ -240,6 +241,7 @@ export function CandidateProfilePanel({ onProfileSaved }: CandidateProfilePanelP
       setProjects((current) => [savedProject, ...current])
       setProjectForm(emptyProjectForm)
       setNotice('Project evidence added to the active profile.')
+      onEvidenceChanged?.()
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : 'Could not add project',

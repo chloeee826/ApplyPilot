@@ -1,0 +1,29 @@
+name: applypilot-portfolio
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: applypilot
+      POSTGRES_USER: applypilot
+      # Local demo credentials only; both published ports bind to loopback.
+      POSTGRES_PASSWORD: applypilot_local_demo
+    ports:
+      - "127.0.0.1:5544:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U applypilot -d applypilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8008:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://applypilot:applypilot_local_demo@db:5432/applypilot
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  postgres_data:

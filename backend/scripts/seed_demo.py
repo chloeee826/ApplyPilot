@@ -160,7 +160,7 @@ def main() -> None:
     print("ApplyPilot demo data is ready.")
     print(f"job_id={result.job_id}")
     print(f"profile_id={result.profile_id}")
-    print("Next: open http://127.0.0.1:5173/agent and run Deterministic demo.")
+    print("Next: open /agent at your running frontend URL and run Deterministic demo.")
 
 
 if __name__ == "__main__":

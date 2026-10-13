@@ -2,7 +2,10 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+from app.services.match_evidence import MatchedSkillEvidence, explain_matches
+from app.services.skill_ontology import SKILL_ONTOLOGY_VERSION
 
 
 class AgentRunCreate(BaseModel):
@@ -32,3 +35,16 @@ class AgentRunRead(BaseModel):
     error: str | None
     created_at: datetime
     completed_at: datetime | None
+    context_status: Literal["unchanged", "changed", "unavailable"] = "unavailable"
+    changed_sources: list[str] = Field(default_factory=list)
+
+    @computed_field
+    @property
+    def matched_skill_evidence(self) -> list[MatchedSkillEvidence]:
+        return explain_matches(self.matched_skills, self.tool_trace, str(self.profile_id))
+
+    @computed_field
+    @property
+    def evidence_ontology_version(self) -> str:
+        """Version used for these read-time annotations, not historical execution."""
+        return SKILL_ONTOLOGY_VERSION

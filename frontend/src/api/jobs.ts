@@ -1,9 +1,14 @@
 import type { Job, JobCreate } from '../types/job'
-import { parseResponse } from './client'
+import { listAllPages, parseResponse } from './client'
 
 export async function listJobs(): Promise<Job[]> {
-  const response = await fetch('/api/jobs')
-  return parseResponse<Job[]>(response)
+  return listAllPages<Job>('/api/jobs')
+}
+
+export async function updateJob(id: string, job: JobCreate): Promise<Job> {
+  return parseResponse<Job>(await fetch(`/api/jobs/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(job),
+  }))
 }
 
 export async function createJob(job: JobCreate): Promise<Job> {

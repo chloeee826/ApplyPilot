@@ -181,6 +181,60 @@ def test_agent_run_rejects_unknown_execution_mode(client: TestClient) -> None:
     assert response.status_code == 422
 
 
+def test_evidence_uses_persisted_run_snapshot_after_profile_changes(client: TestClient) -> None:
+    job, profile = create_agent_context(client)
+    with Session(test_engine) as session:
+        project = CandidateProject(
+            profile_id=UUID(profile["id"]), name="Backend API",
+            description="Original API description", technologies=["Python"],
+            highlights=["Original project highlight"],
+        )
+        session.add(project)
+        session.commit()
+        project_id = project.id
+    created = client.post("/agent-runs", json={
+        "job_id": job["id"], "profile_id": profile["id"], "mode": "demo",
+    }).json()
+    evidence = created["matched_skill_evidence"]
+    assert created["context_status"] == "unchanged"
+    assert evidence
+    assert all(item["sources"] for item in evidence)
+    python_sources = next(item["sources"] for item in evidence if item["skill"] == "Python")
+    project_source = next(item for item in python_sources if item["source_type"] == "project")
+    assert project_source["description"] == "Original API description"
+    assert project_source["highlights"] == ["Original project highlight"]
+    assert created["evidence_ontology_version"] == "skills-v2"
+    with Session(test_engine) as session:
+        saved_profile = session.get(CandidateProfile, UUID(profile["id"]))
+        saved_profile.skills = []
+        saved_profile.full_name = "Changed name"
+        saved_project = session.get(CandidateProject, project_id)
+        saved_project.description = "Changed description"
+        saved_project.highlights = []
+        saved_project.technologies = []
+        session.commit()
+    fetched = client.get(f"/agent-runs/{created['id']}").json()
+    listed = client.get("/agent-runs").json()[0]
+    assert fetched["matched_skill_evidence"] == evidence
+    assert listed["matched_skill_evidence"] == evidence
+    assert fetched["context_status"] == "changed"
+    assert set(fetched["changed_sources"]) == {"get_candidate_profile", "list_candidate_projects"}
+
+
+def test_job_edit_marks_report_stale_without_destroying_history(client: TestClient) -> None:
+    job, profile = create_agent_context(client)
+    created = client.post("/agent-runs", json={
+        "job_id": job["id"], "profile_id": profile["id"], "mode": "demo",
+    }).json()
+    assert created["context_status"] == "unchanged"
+    assert client.patch(f"/jobs/{job['id']}", json={"description": "Build Java services."}).status_code == 200
+    fetched = client.get(f"/agent-runs/{created['id']}").json()
+    assert fetched["context_status"] == "changed"
+    assert "get_job" in fetched["changed_sources"]
+    assert "get_job_analysis" in fetched["changed_sources"]
+    assert fetched["matched_skills"] == created["matched_skills"]
+
+
 def test_list_and_get_agent_runs(client: TestClient) -> None:
     job, profile = create_agent_context(client)
     created = client.post(

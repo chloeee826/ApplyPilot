@@ -1,9 +1,8 @@
 import type { JobAnalysis } from '../types/jobAnalysis'
-import { parseResponse } from './client'
+import { listAllPages, parseResponse } from './client'
 
 export async function listJobAnalyses(): Promise<JobAnalysis[]> {
-  const response = await fetch('/api/job-analyses')
-  return parseResponse<JobAnalysis[]>(response)
+  return listAllPages<JobAnalysis>('/api/job-analyses')
 }
 
 export async function analyzeJob(jobId: string): Promise<JobAnalysis> {

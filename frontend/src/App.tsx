@@ -4,7 +4,7 @@ import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { listAgentRuns } from './api/agentRuns'
 import { listApplications, updateApplication } from './api/applications'
 import { analyzeJob, listJobAnalyses } from './api/jobAnalyses'
-import { createJob, listJobs } from './api/jobs'
+import { createJob, listJobs, updateJob } from './api/jobs'
 import { listProfiles } from './api/profiles'
 import './App.css'
 import { AgentWorkspace } from './components/AgentWorkspace'
@@ -95,6 +95,22 @@ function App() {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
+  async function refreshRunHistory() {
+    try { setAgentRuns(await listAgentRuns()) }
+    catch { setError('Changes were saved, but report history could not refresh. Reload before reviewing reports.') }
+  }
+
+  async function handleEditJob(id: string, values: JobCreate) {
+    const previous = jobs.find((job) => job.id === id)
+    const saved = await updateJob(id, values)
+    setJobs((current) => current.map((job) => job.id === id ? saved : job))
+    if (previous?.description !== saved.description) {
+      setAnalyses((current) => current.filter((analysis) => analysis.job_id !== id))
+    }
+    setNotice('Changes saved. Re-analyze a changed description before generating a new report.')
+    await refreshRunHistory()
+  }
+
   async function handleAnalyzeJob(jobId: string) {
     setAnalyzingJobId(jobId)
     setError(null)
@@ -110,6 +126,7 @@ function App() {
           : [savedAnalysis, ...current]
       })
       setNotice('Job analysis is ready. You can now use this role in Agent Match.')
+      await refreshRunHistory()
     } catch (analysisError) {
       setError(
         analysisError instanceof Error
@@ -136,11 +153,11 @@ function App() {
 
     try {
       const savedJob = await createJob(payload)
-      const savedApplications = await listApplications()
       setJobs((current) => [savedJob, ...current])
-      setApplications(savedApplications)
       setForm(emptyForm)
       setNotice('Job saved. Analyze its description when you are ready to match it.')
+      try { setApplications(await listApplications()) }
+      catch { setError('Job saved, but application status could not refresh. Reload the workspace.') }
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Could not create job')
     } finally {
@@ -254,6 +271,7 @@ function App() {
                 isSubmitting={isSubmitting}
                 jobs={jobs}
                 onAnalyzeJob={handleAnalyzeJob}
+                onEditJob={handleEditJob}
                 onFieldChange={updateField}
                 onStatusChange={handleStatusChange}
                 onSubmit={handleSubmit}
@@ -279,7 +297,7 @@ function App() {
                   />
                 </header>
                 <CandidateProfilePanel
-                  onProfileSaved={(profile) =>
+                  onProfileSaved={(profile) => {
                     setProfiles((current) => {
                       const exists = current.some((candidate) => candidate.id === profile.id)
                       return exists
@@ -288,7 +306,9 @@ function App() {
                           )
                         : [profile, ...current]
                     })
-                  }
+                    void refreshRunHistory()
+                  }}
+                  onEvidenceChanged={() => void refreshRunHistory()}
                 />
               </div>
             }
