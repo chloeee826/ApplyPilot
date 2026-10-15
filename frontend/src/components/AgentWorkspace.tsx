@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { MatchScorecard } from './MatchScorecard'
 
 import { createAgentRun, listAgentRuns } from '../api/agentRuns'
 import type { AgentRun } from '../types/agentRun'
@@ -14,6 +15,7 @@ interface AgentWorkspaceProps {
   runs: AgentRun[]
   isLoading: boolean
   onRunsChange: (runs: AgentRun[]) => void
+  reportOnly?: boolean
 }
 
 interface ResultListProps {
@@ -47,6 +49,7 @@ export function AgentWorkspace({
   runs,
   isLoading,
   onRunsChange,
+  reportOnly = false,
 }: AgentWorkspaceProps) {
   const [selectedJobId, setSelectedJobId] = useState('')
   const [selectedProfileId, setSelectedProfileId] = useState('')
@@ -64,6 +67,8 @@ export function AgentWorkspace({
   const selectedAnalysis = analyses.find((analysis) => analysis.job_id === effectiveJobId)
   const reportJob = activeRun?.tool_trace.find((tool) => tool.name === 'get_job')?.output
   const reportTitle = typeof reportJob?.title === 'string' ? reportJob.title : jobs.find((job) => job.id === activeRun?.job_id)?.title
+  const displayedEvidence = activeRun?.skill_coverage?.supported ?? activeRun?.matched_skill_evidence ?? []
+  const displayedSkills = activeRun?.skill_coverage ? displayedEvidence.map((item) => item.skill) : activeRun?.matched_skills ?? []
 
   async function handleRun(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -101,10 +106,11 @@ export function AgentWorkspace({
   )
 
   return (
-    <section className="agent-panel" aria-labelledby="agent-workspace-heading">
-      <div className="section-heading agent-section-heading">
+    <section className="agent-panel" aria-label={reportOnly ? 'Saved match report' : undefined}
+      aria-labelledby={reportOnly ? undefined : 'agent-workspace-heading'}>
+      {!reportOnly && <div className="section-heading agent-section-heading">
         <div>
-          <p className="step-label">04 · Generate a recommendation</p>
+          <p className="step-label">Saved reports & advanced checks</p>
           <h2 id="agent-workspace-heading">Job-match agent</h2>
           <p>
             The workflow retrieves saved evidence through controlled tools before it
@@ -114,9 +120,11 @@ export function AgentWorkspace({
         <span className="agent-run-count">
           {runs.length} {runs.length === 1 ? 'run' : 'runs'}
         </span>
-      </div>
+      </div>}
 
       <div className="agent-layout">
+        {!reportOnly && <details className="advanced-runner">
+        <summary>Advanced: run a saved job</summary>
         <form className="agent-controls" onSubmit={handleRun}>
           <label>
             Target job
@@ -189,6 +197,7 @@ export function AgentWorkspace({
             </p>
           )}
         </form>
+        </details>}
 
         <div className="agent-output" aria-live="polite">
           {error && <p className="error-message agent-error">{error}</p>}
@@ -220,10 +229,10 @@ export function AgentWorkspace({
                 <div>
                   <p className="agent-result-label">
                     {activeRun.model.startsWith('demo-evidence-v')
-                      ? 'Deterministic demo result'
+                      ? reportOnly ? 'Rules-based evidence check' : 'Deterministic demo result'
                       : 'Latest selected run'}
                   </p>
-                  <h3>{activeRun.status === 'completed' ? 'Recommendation' : 'Run details'}</h3>
+                  <h3>{activeRun.status === 'completed' ? reportOnly ? 'Your match report' : 'Recommendation' : 'Run details'}</h3>
                   <p>Report for {reportTitle ?? 'saved role'} · {new Date(activeRun.created_at).toLocaleString()}</p>
                 </div>
                 <span className={`run-status run-status-${activeRun.status}`}>
@@ -238,7 +247,6 @@ export function AgentWorkspace({
                 </div>
               ) : (
                 <>
-                  <p className="agent-summary">{activeRun.summary}</p>
                   {activeRun.context_status === 'changed' && (
                     <p className="report-context-notice" role="status">
                       Your saved evidence or job requirements have changed since this report.
@@ -249,16 +257,18 @@ export function AgentWorkspace({
                   {activeRun.context_status === 'unavailable' && <p className="report-context-notice">
                     This older report has incomplete snapshots. Freshness could not be checked.
                   </p>}
+                  <MatchScorecard coverage={activeRun.skill_coverage} stale={activeRun.context_status === 'changed'} />
+                  <p className="agent-summary">{activeRun.summary}</p>
                   <div className="agent-result-grid">
                     <section className="agent-result-group result-positive">
                       <h4>Matched skills · supporting sources</h4>
                       <p>Saved at run time. Profile skills are self-reported.</p>
-                      {activeRun.matched_skills.length === 0 ? (
+                      {displayedSkills.length === 0 ? (
                         <p>No supported matches were returned.</p>
                       ) : (
                         <ul>
-                          {activeRun.matched_skills.map((skill) => {
-                            const sources = activeRun.matched_skill_evidence?.find(
+                          {displayedSkills.map((skill) => {
+                            const sources = displayedEvidence.find(
                               (item) => item.skill === skill,
                             )?.sources ?? []
                             return (
@@ -305,12 +315,12 @@ export function AgentWorkspace({
                       )}
                       <p>Expand a source to review its saved details. Sources matched using {activeRun.evidence_ontology_version ?? 'unavailable rules'}.</p>
                     </section>
-                    <ResultList
+                    {!activeRun.skill_coverage && <ResultList
                       title="Skill gaps"
                       items={activeRun.skill_gaps}
                       emptyMessage="No evidence gaps were returned."
                       tone="gap"
-                    />
+                    />}
                     <ResultList
                       title="Project evidence"
                       items={activeRun.project_evidence}
@@ -325,6 +335,8 @@ export function AgentWorkspace({
                 </>
               )}
 
+              <details className="report-technical-details">
+              <summary>Technical report details</summary>
               <footer className="agent-result-meta">
                 <span>{activeRun.model}</span>
                 <span>
@@ -332,10 +344,11 @@ export function AgentWorkspace({
                   {activeRun.tool_trace.length === 1 ? '' : 's'}
                 </span>
               </footer>
+              </details>
             </article>
           )}
 
-          {runs.length > 1 && (
+          {!reportOnly && runs.length > 1 && (
             <div className="run-history">
               <h3>Recent runs</h3>
               <div>

@@ -28,17 +28,25 @@ through the normal Docker Desktop installation rather than deleting your setting
 
 ## Five-minute walkthrough
 
-1. **Overview:** follow the four-step journey. Counts come from saved records.
-2. **Candidate:** review the seeded profile and projects. Alternatively upload a
-   text-layer PDF, correct the draft, and confirm it. Preview alone saves nothing.
-3. **Jobs:** save a role or inspect the seeded role. Update its application status.
-   Search by company/title/location, filter by status, and move through UI pages.
-4. **Analyze:** inspect extracted skills, requirements, and responsibilities.
-5. **Agent Match:** choose the role/profile, keep deterministic demo selected, and
-   run. Inspect matches and gaps; expand a source to see saved project details.
-6. **Refresh:** the stored report loads again from PostgreSQL.
-7. **Edit and regenerate:** change the job description, observe invalidated analysis
-   and an older-report warning, re-analyze, then run a fresh report. History remains.
+1. **Check fit → Your resume:** choose the saved profile or upload a text-layer PDF,
+   correct the draft, and confirm it. Preview alone saves nothing.
+2. **Target job:** enter the company, role title, and original JD, then click
+   **Analyze my fit**. This runs the rules-based evidence check, not OpenAI.
+3. **Your results:** inspect skill evidence coverage, role-specific missing evidence
+   and JD excerpts. Expand supporting sources to see the original saved snapshots.
+4. **Refresh:** the result URL contains the run ID, and reload retrieves the same
+   persisted report. **Check another job** keeps the profile but starts a new role.
+5. **Jobs:** track application status, search/filter saved roles, or edit a JD.
+6. **Reports:** review history. Advanced execution settings allow a fresh run on an
+   analyzed saved job. After edits, old reports retain their snapshots and show a
+   freshness warning; re-analyze and generate a fresh report when needed.
+
+The one-click endpoint saves the job, application, deterministic analysis, and
+report in one transaction. Repeating the same request ID with unchanged inputs
+returns the original result instead of duplicating records. Changed evidence or
+inputs require a new check. A failed transaction rolls back partial writes. No paid
+LLM request is made on this main path, even when an API key is configured.
+Candidate editing remains under `/candidate`; the old summary is under `/overview`.
 
 Profile skills and project highlights are candidate-provided evidence, not verified
 proficiency. The original snapshot stays fixed, while read-time source annotation
@@ -89,6 +97,20 @@ dedicated local Compose workspace. A successful local build, real PostgreSQL tes
 and restart comparison are recorded in `docs/release-verification.md`.
 
 ## Metrics and limitations
+
+The Agent Match report displays `coverage-v1`: supported unique extracted job
+skills divided by all unique extracted job skills, multiplied by 100. Aliases
+count once, each skill has equal weight, and profile/project support comes from
+the run snapshots. Coverage is calculated independently of model-written match
+claims. Missing evidence cards identify the saved role/company and quote related
+JD sentences where available. Zero extracted skills or incomplete snapshots do not
+produce a numeric score; failed runs have no score. Stale reports show a historical
+input warning. The formula and current source ontology are displayed in the UI.
+
+This is technical evidence coverage, not overall qualification or hiring probability.
+It does not score proficiency, years of experience, seniority, education, or
+requirement priority. Parser omissions affect the denominator, so review the full
+JD. Missing saved support does not mean the candidate lacks that skill.
 
 The parser benchmark contains 20 synthetic cases: 98.57% precision and 74.19%
 recall. Deterministic matching has 36 curated cases. The preserved v3 first run

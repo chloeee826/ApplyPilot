@@ -12,6 +12,8 @@ import { CandidateProfilePanel } from './components/CandidateProfilePanel'
 import { PageGuide } from './components/PageGuide'
 import { JobsPage } from './pages/JobsPage'
 import { OverviewPage } from './pages/OverviewPage'
+import { FitCheckPage } from './pages/FitCheckPage'
+import type { FitCheckResult } from './api/fitChecks'
 import type { Application, ApplicationStatus } from './types/application'
 import type { AgentRun } from './types/agentRun'
 import type { CandidateProfile } from './types/candidate'
@@ -27,11 +29,14 @@ const emptyForm: JobCreate = {
 }
 
 const navigation = [
-  { label: 'Overview', marker: '01', to: '/' },
-  { label: 'Candidate', marker: '02', to: '/candidate' },
-  { label: 'Jobs', marker: '03', to: '/jobs' },
-  { label: 'Agent Match', marker: '04', to: '/agent' },
+  { label: 'Check fit', marker: '01', to: '/' },
+  { label: 'Jobs', marker: '02', to: '/jobs' },
+  { label: 'Reports', marker: '03', to: '/agent' },
 ]
+
+function upsert<T extends { id: string }>(items: T[], saved: T): T[] {
+  return [saved, ...items.filter((item) => item.id !== saved.id)]
+}
 
 function App() {
   const [backendStatus, setBackendStatus] = useState('Not checked')
@@ -49,6 +54,7 @@ function App() {
   const [analyzingJobId, setAnalyzingJobId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [workspaceLoadError, setWorkspaceLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -79,6 +85,7 @@ function App() {
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError instanceof Error ? loadError.message : 'Could not load jobs')
+          setWorkspaceLoadError('Workspace could not load.')
         }
       } finally {
         if (!cancelled) setIsLoading(false)
@@ -93,6 +100,20 @@ function App() {
 
   function updateField(field: keyof JobCreate, value: string) {
     setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  function profileSaved(profile: CandidateProfile) {
+    setProfiles((current) => upsert(current, profile))
+    void refreshRunHistory()
+  }
+
+  function fitCheckCompleted(result: FitCheckResult) {
+    setJobs((current) => upsert(current, result.job))
+    setApplications((current) => upsert(current, result.application))
+    setAnalyses((current) => upsert(current, result.analysis))
+    setAgentRuns((current) => upsert(current, result.report))
+    setError(null)
+    setNotice(null)
   }
 
   async function refreshRunHistory() {
@@ -125,7 +146,7 @@ function App() {
             )
           : [savedAnalysis, ...current]
       })
-      setNotice('Job analysis is ready. You can now use this role in Agent Match.')
+      setNotice('Job analysis is ready. You can now run this role under Reports → Advanced.')
       await refreshRunHistory()
     } catch (analysisError) {
       setError(
@@ -227,10 +248,14 @@ function App() {
 
         <div className="sidebar-footer">
           <p>Evidence in. Better interviews out.</p>
+          <NavLink to="/candidate">Candidate library</NavLink>
+          <NavLink to="/overview">Workspace summary</NavLink>
+          <details><summary>Connection details</summary>
           <button className="health-button" type="button" onClick={checkBackend}>
             <span className={`status-dot status-${backendStatus.toLowerCase()}`} />
             API: {backendStatus}
           </button>
+          </details>
         </div>
       </aside>
 
@@ -248,6 +273,12 @@ function App() {
         <Routes>
           <Route
             path="/"
+            element={<FitCheckPage profiles={profiles} jobs={jobs} analyses={analyses} runs={agentRuns}
+              isLoading={isLoading} loadError={workspaceLoadError} onProfileSaved={profileSaved}
+              onComplete={fitCheckCompleted} onRunsChange={setAgentRuns} />}
+          />
+          <Route
+            path="/overview"
             element={
               <OverviewPage
                 analyses={analyses}
@@ -297,17 +328,7 @@ function App() {
                   />
                 </header>
                 <CandidateProfilePanel
-                  onProfileSaved={(profile) => {
-                    setProfiles((current) => {
-                      const exists = current.some((candidate) => candidate.id === profile.id)
-                      return exists
-                        ? current.map((candidate) =>
-                            candidate.id === profile.id ? profile : candidate,
-                          )
-                        : [profile, ...current]
-                    })
-                    void refreshRunHistory()
-                  }}
+                  onProfileSaved={profileSaved}
                   onEvidenceChanged={() => void refreshRunHistory()}
                 />
               </div>
@@ -318,17 +339,9 @@ function App() {
             element={
               <div className="feature-page">
                 <header className="page-header">
-                  <p className="eyebrow">Step 4 · Evidence-grounded recommendation</p>
-                  <h1>Agent Match</h1>
-                  <p>Compare one analyzed role with your saved experience and prepare a focused interview strategy.</p>
-                  <PageGuide
-                    label="Agent match workflow"
-                    items={[
-                      { title: 'Select', description: 'Choose a saved profile and analyzed role.' },
-                      { title: 'Run', description: 'Retrieve evidence through controlled tools.' },
-                      { title: 'Prepare', description: 'Review matches, gaps, and interview focus.' },
-                    ]}
-                  />
+                  <p className="eyebrow">Your saved checks</p>
+                  <h1>Reports</h1>
+                  <p>Revisit your results and supporting evidence. <NavLink to="/">Start a new fit check →</NavLink></p>
                 </header>
                 <AgentWorkspace
                   jobs={jobs}

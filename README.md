@@ -73,16 +73,19 @@ The repository currently contains a tested full-stack foundation with:
   technologies, and highlights without navigating away from the recommendation;
 - report freshness checks comparing stored snapshots with current job, analysis,
   profile, and project data, while preserving the original report;
+- a role-specific skill evidence coverage score, grounded in saved snapshots rather
+  than model claims, with missing-evidence cards showing related original JD excerpts;
 - API endpoints for starting, listing, and retrieving agent runs;
 - a React agent workspace for selecting analyzed jobs and candidate profiles,
   starting runs, and reviewing matched skills, gaps, project evidence, interview
   focus areas, run history, and actionable failure states;
 - an explicitly labelled deterministic demo mode that runs the same four evidence
   tools and persists a successful recommendation without external API credits;
-- a responsive product shell with routed Overview, Jobs, Candidate, and Agent
-  Match workspaces, including database-backed readiness metrics and recent roles;
-- a four-step guided journey that derives completion and the next best action
-  from persisted profiles, jobs, analyses, and completed agent runs;
+- a three-step home flow: review resume evidence, paste a target job, and inspect
+  a saved role-specific report; one rules-based action saves all related records
+  atomically, with request IDs preventing duplicate records on retries;
+- secondary Jobs and Reports workspaces, with candidate editing and the workspace
+  overview available separately; advanced execution settings stay out of the main flow;
 - page-level onboarding, actionable empty states, and success feedback for the
   resume-to-recommendation workflow;
 - a production application factory that serves the compiled React workspace and
@@ -106,19 +109,22 @@ No OpenAI key is required for this path:
 2. From the `backend` directory, run `python -m scripts.seed_demo`. The command is
    idempotent, so running it again refreshes the same demo records instead of
    creating duplicates.
-3. Open `http://127.0.0.1:5173` and use the guided journey to review the seeded
-   candidate evidence, target role, and structured analysis.
-4. Continue to **Agent Match**, keep **Deterministic demo** selected, and run it.
-5. Review the persisted recommendation, skill gaps, project evidence, four-tool
-   trace count, and run history. Refreshing the browser reloads the saved run from
-   PostgreSQL.
+3. Open `http://127.0.0.1:5173`. Choose the saved profile or upload a text-based PDF
+   and review its extracted evidence before confirming it.
+4. Enter the company, role title, and original job description. Click **Analyze my
+   fit**. This rules-based path makes no paid AI request.
+5. Inspect the evidence coverage score, missing evidence with original JD excerpts,
+   and supporting source snapshots. Refresh the result URL to load the same report
+   from PostgreSQL. Jobs and Reports remain accessible for tracking and history.
 
 To use your own evidence instead, open `/candidate`, upload a text-based PDF
 resume of up to 5 MB, review every extracted profile and project field, and
 confirm the import. Scanned-image PDFs require OCR and are not supported yet.
-Then save and analyze a real job description under `/jobs`.
+The home flow saves the job, application, analysis, and report together. Advanced
+manual job management remains available under `/jobs`.
 
-Choose **OpenAI agent** only when `OPENAI_API_KEY` is configured. This path runs
+Under **Reports → Advanced: run a saved job**, choose **OpenAI agent** only when
+`OPENAI_API_KEY` is configured. This path runs
 the bounded Responses API tool loop; configuration and execution failures are
 persisted for inspection instead of being replaced with demo output.
 
@@ -208,7 +214,7 @@ npm run test:e2e
 ```
 
 Tests start their own backend on `8011` and frontend on `5181` and stop them on
-completion. These ports must be free. The five sequential journey checks cover
+completion. These ports must be free. The six sequential journey checks cover
 PDF review/import, job editing and stale reports, persistence after refresh,
 102-record pagination and filtering, invalid uploads, failed agent mode, network
 failure, and mobile source disclosure. They are one shared synthetic workspace,

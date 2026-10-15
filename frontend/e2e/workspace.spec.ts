@@ -1,7 +1,16 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 // These steps share the isolated workspace created by the first journey test.
 test.describe.configure({ mode: 'serial' })
+
+async function openRunner(page: Page) {
+  const summary = page.getByText('Advanced: run a saved job', { exact: true })
+  await expect(summary).toBeVisible()
+  if (!await page.locator('.advanced-runner').evaluate((element) => (element as HTMLDetailsElement).open)) {
+    await summary.click()
+  }
+  await expect(page.getByLabel('Target job')).toBeVisible()
+}
 
 // Original synthetic resume fixture. Generates a real text-layer PDF and xref;
 // the production pypdf extractor runs without mocking extraction or API responses.
@@ -34,7 +43,7 @@ test('real PDF review → atomic import → job → report → edit → rerun �
   await page.getByRole('button', { name: 'Confirm and create profile' }).click()
   await expect(page.getByText('Profile saved with 1 new and 0 updated project.')).toBeVisible()
 
-  await page.getByRole('link', { name: '03 Jobs' }).click()
+  await page.getByRole('link', { name: '02 Jobs' }).click()
   await page.getByLabel('Company', { exact: true }).fill('Browser Demo Co')
   await page.getByLabel('Role title', { exact: true }).fill('Backend Engineer')
   await page.getByLabel('Job description', { exact: true }).fill('Build Python FastAPI PostgreSQL services. Docker preferred.')
@@ -44,29 +53,38 @@ test('real PDF review → atomic import → job → report → edit → rerun �
   await expect(page.getByRole('status')).toHaveText('Application status updated.')
   await page.getByRole('button', { name: 'Analyze description' }).click()
   await expect(page.getByRole('heading', { name: 'Structured analysis' })).toBeVisible()
-  await page.getByRole('link', { name: '04 Agent Match' }).click()
+  await page.getByRole('link', { name: '03 Reports' }).click()
+  await openRunner(page)
   await page.getByRole('button', { name: 'Run job-match agent' }).click()
   await expect(page.getByRole('heading', { name: 'Recommendation', exact: true })).toBeVisible()
+  await expect(page.getByTestId('coverage-score')).toHaveText('75%')
+  await expect(page.getByRole('region', { name: 'Missing evidence for this role' })).toContainText('Docker preferred.')
+  await page.getByText('How this score works', { exact: true }).click()
+  await expect(page.getByText(/Supported unique skills ÷ extracted unique job skills/)).toBeVisible()
   await page.getByText('Project · Evidence API · “Python”', { exact: true }).click()
   await expect(page.getByText('Built transaction-safe API endpoints.', { exact: true }).first()).toBeVisible()
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Recommendation', exact: true })).toBeVisible()
 
-  await page.getByRole('link', { name: '03 Jobs' }).click()
+  await page.getByRole('link', { name: '02 Jobs' }).click()
   await page.getByRole('button', { name: 'Edit job', exact: true }).click()
   await page.getByLabel('Edit job description').fill('Build Python FastAPI PostgreSQL and Java services.')
   await page.getByRole('button', { name: 'Save changes', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Analyze description' })).toBeVisible()
-  await page.getByRole('link', { name: '04 Agent Match' }).click()
+  await page.getByRole('link', { name: '03 Reports' }).click()
+  await openRunner(page)
   await expect(page.getByText(/have changed since this report/)).toBeVisible()
+  await expect(page.getByText('Historical evidence score · refresh needed')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run job-match agent' })).toBeDisabled()
-  await page.getByRole('link', { name: '03 Jobs' }).click()
+  await page.getByRole('link', { name: '02 Jobs' }).click()
   await page.getByRole('button', { name: 'Analyze description' }).click()
   await expect(page.getByRole('heading', { name: 'Structured analysis' })).toBeVisible()
-  await page.getByRole('link', { name: '04 Agent Match' }).click()
+  await page.getByRole('link', { name: '03 Reports' }).click()
+  await openRunner(page)
   await page.getByRole('button', { name: 'Run job-match agent' }).click()
   await expect(page.getByText(/have changed since this report/)).toHaveCount(0)
   await expect(page.getByText('Java', { exact: true })).toBeVisible()
+  await expect(page.getByTestId('coverage-score')).toHaveText('75%')
   await page.screenshot({ path: 'test-results/release-agent.png', fullPage: true })
 })
 
@@ -97,10 +115,12 @@ test('invalid PDF and failed real-agent mode have actionable errors', async ({ p
   await page.getByRole('button', { name: 'Create review draft' }).click()
   await expect(page.getByText('The uploaded file does not have a valid PDF header.')).toBeVisible()
   await page.goto('/agent')
+  await openRunner(page)
   await page.getByLabel('Target job').selectOption({ label: 'Browser Demo Co · Backend Engineer' })
   await page.getByLabel('Execution mode').selectOption('openai')
   await page.getByRole('button', { name: 'Run job-match agent' }).click()
   await expect(page.getByRole('heading', { name: 'The run was saved, but it did not complete.' })).toBeVisible()
+  await expect(page.getByTestId('coverage-score')).toHaveCount(0)
   await expect(page.getByText('OPENAI_API_KEY is not configured', { exact: true }).last()).toBeVisible()
   await page.reload()
   await expect(page.getByRole('heading', { name: 'The run was saved, but it did not complete.' })).toBeVisible()
@@ -109,6 +129,7 @@ test('invalid PDF and failed real-agent mode have actionable errors', async ({ p
 test('network failure displays an error rather than a completed recommendation', async ({ page }) => {
   await page.route('**/api/agent-runs', (route) => route.request().method() === 'POST' ? route.abort() : route.continue())
   await page.goto('/agent')
+  await openRunner(page)
   await page.getByLabel('Target job').selectOption({ label: 'Browser Demo Co · Backend Engineer' })
   await page.getByRole('button', { name: 'Run job-match agent' }).click()
   await expect(page.getByText(/Failed to fetch/)).toBeVisible()
@@ -118,11 +139,38 @@ test('network failure displays an error rather than a completed recommendation',
 test('mobile navigation, filters, and source disclosure fit the viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/agent')
-  await expect(page.getByRole('heading', { name: 'Agent Match', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reports', exact: true })).toBeVisible()
   // History includes a failed run; choose the successful older run.
   await page.getByRole('button', { name: /Browser Demo Co · Backend Engineer.*completed/ }).first().click()
   await page.getByText('Project · Evidence API · “Python”', { exact: true }).click()
   await expect(page.getByText('Built transaction-safe API endpoints.', { exact: true }).first()).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: 'test-results/release-mobile.png', fullPage: true })
+})
+
+test('guided resume review → one action → saved role-specific score → refresh', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'How does your resume fit this job?' })).toBeVisible()
+  await page.getByText('Upload a resume or edit saved evidence', { exact: true }).click()
+  await page.getByLabel('PDF resume').setInputFiles({ name: 'guided.pdf', mimeType: 'application/pdf', buffer: resumePdf() })
+  await page.getByRole('button', { name: 'Create review draft' }).click()
+  await page.getByLabel('Full name', { exact: true }).fill('Guided Candidate')
+  await page.getByRole('button', { name: 'Confirm profile update' }).click()
+  await expect(page.getByRole('heading', { name: 'Which role are you considering?' })).toBeVisible()
+  await page.getByLabel('Company', { exact: true }).fill('Guided Co')
+  await page.getByLabel('Role title', { exact: true }).fill('Guided Backend Engineer')
+  await page.getByLabel('Job description', { exact: true }).fill('Build Python APIs. Docker preferred.')
+  await page.getByRole('button', { name: 'Analyze my fit', exact: true }).click()
+  await expect(page).toHaveURL(/\?run=/)
+  await expect(page.getByRole('heading', { name: 'Your match report', exact: true })).toBeVisible()
+  await expect(page.getByTestId('coverage-score')).toHaveText('50%')
+  await expect(page.getByRole('region', { name: 'Missing evidence for this role' })).toContainText('Docker preferred.')
+  await expect(page.getByLabel('Execution mode')).not.toBeVisible()
+  await page.reload()
+  await expect(page.getByTestId('coverage-score')).toHaveText('50%')
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: 'test-results/guided-result-mobile.png', fullPage: true })
+  await page.getByRole('button', { name: 'Check another job' }).click()
+  await expect(page.getByRole('heading', { name: 'Which role are you considering?' })).toBeVisible()
 })

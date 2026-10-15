@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.database import Base, get_db
 from app.main import app
 from app.models.agent_run import AgentRun
+from app.models.application import Application
 from app.models.candidate import CandidateProfile, CandidateProject
 from app.models.job import Job
 from app.models.job_analysis import JobAnalysis
@@ -76,6 +77,7 @@ def client():
 def clear_agent_data():
     with TestSessionLocal() as session:
         session.execute(delete(AgentRun))
+        session.execute(delete(Application))
         session.execute(delete(JobAnalysis))
         session.execute(delete(CandidateProject))
         session.execute(delete(CandidateProfile))
@@ -86,6 +88,7 @@ def clear_agent_data():
 
     with TestSessionLocal() as session:
         session.execute(delete(AgentRun))
+        session.execute(delete(Application))
         session.execute(delete(JobAnalysis))
         session.execute(delete(CandidateProject))
         session.execute(delete(CandidateProfile))
@@ -197,6 +200,8 @@ def test_evidence_uses_persisted_run_snapshot_after_profile_changes(client: Test
     }).json()
     evidence = created["matched_skill_evidence"]
     assert created["context_status"] == "unchanged"
+    assert created["skill_coverage"]["percentage"] == 66.7
+    assert created["skill_coverage"]["gaps"][0]["skill"] == "AWS"
     assert evidence
     assert all(item["sources"] for item in evidence)
     python_sources = next(item["sources"] for item in evidence if item["skill"] == "Python")
@@ -216,6 +221,7 @@ def test_evidence_uses_persisted_run_snapshot_after_profile_changes(client: Test
     fetched = client.get(f"/agent-runs/{created['id']}").json()
     listed = client.get("/agent-runs").json()[0]
     assert fetched["matched_skill_evidence"] == evidence
+    assert fetched["skill_coverage"] == created["skill_coverage"]
     assert listed["matched_skill_evidence"] == evidence
     assert fetched["context_status"] == "changed"
     assert set(fetched["changed_sources"]) == {"get_candidate_profile", "list_candidate_projects"}
@@ -283,3 +289,75 @@ def test_failed_agent_run_is_persisted(client: TestClient) -> None:
     assert saved.status_code == 200
     assert saved.json()["status"] == "failed"
     assert saved.json()["error"] == "Model response was incomplete"
+
+
+def fit_request(profile_id: str) -> dict:
+    return {
+        "request_id": str(uuid4()), "profile_id": profile_id,
+        "job": {"company_name": "Guided Co", "title": "Backend Engineer",
+                "description": "Build Python services. Docker preferred."},
+    }
+
+
+def test_guided_check_saves_all_records_and_retries_without_duplicates(client: TestClient) -> None:
+    _, profile = create_agent_context(client)
+    payload = fit_request(profile["id"])
+    first = client.post("/fit-checks", json=payload)
+    assert first.status_code == 200
+    body = first.json()
+    assert body["job"]["id"] == payload["request_id"]
+    assert body["application"]["status"] == "saved"
+    assert body["analysis"]["skills"] == ["Python", "Docker"]
+    assert body["report"]["model"] == DEMO_AGENT_MODEL
+    assert body["report"]["context_status"] == "unchanged"
+    assert body["report"]["skill_coverage"]["percentage"] == 50.0
+    second = client.post("/fit-checks", json=payload)
+    assert second.status_code == 200
+    assert second.json()["report"]["id"] == body["report"]["id"]
+    with Session(test_engine) as session:
+        for model in (Application, JobAnalysis, AgentRun):
+            assert len(session.scalars(select(model).where(model.job_id == UUID(payload["request_id"]))).all()) == 1
+    assert client.get(f"/agent-runs/{body['report']['id']}").json()["skill_coverage"] == body["report"]["skill_coverage"]
+
+
+def test_guided_check_requires_saved_profile(client: TestClient) -> None:
+    response = client.post("/fit-checks", json=fit_request(str(uuid4())))
+    assert response.status_code == 404
+
+
+def test_guided_check_rejects_reused_id_with_new_inputs(client: TestClient) -> None:
+    _, profile = create_agent_context(client)
+    payload = fit_request(profile["id"])
+    assert client.post("/fit-checks", json=payload).status_code == 200
+    payload["job"]["description"] = "Build Java services."
+    assert client.post("/fit-checks", json=payload).status_code == 409
+
+
+def test_guided_check_requires_new_request_after_evidence_changes(client: TestClient) -> None:
+    _, profile = create_agent_context(client)
+    payload = fit_request(profile["id"])
+    assert client.post("/fit-checks", json=payload).status_code == 200
+    with Session(test_engine) as session:
+        session.get(CandidateProfile, UUID(profile["id"])).skills = ["Java"]
+        session.commit()
+    assert client.post("/fit-checks", json=payload).status_code == 409
+    payload["request_id"] = str(uuid4())
+    fresh = client.post("/fit-checks", json=payload)
+    assert fresh.status_code == 200
+    assert fresh.json()["report"]["skill_coverage"]["percentage"] == 0.0
+
+
+def test_guided_check_rolls_back_partial_writes(client: TestClient, monkeypatch) -> None:
+    _, profile = create_agent_context(client)
+    payload = fit_request(profile["id"])
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("Synthetic failure after writes")
+
+    monkeypatch.setattr("app.routers.fit_checks.run_demo_job_match_agent", fail)
+    with pytest.raises(RuntimeError, match="Synthetic failure"):
+        client.post("/fit-checks", json=payload)
+    with Session(test_engine) as session:
+        assert session.get(Job, UUID(payload["request_id"])) is None
+        for model in (Application, JobAnalysis, AgentRun):
+            assert session.scalar(select(model).where(model.job_id == UUID(payload["request_id"]))) is None

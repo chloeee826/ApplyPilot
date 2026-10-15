@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.services.match_evidence import MatchedSkillEvidence, explain_matches
 from app.services.skill_ontology import SKILL_ONTOLOGY_VERSION
+from app.services.skill_coverage import SkillCoverage, calculate_coverage
 
 
 class AgentRunCreate(BaseModel):
@@ -48,3 +49,10 @@ class AgentRunRead(BaseModel):
     def evidence_ontology_version(self) -> str:
         """Version used for these read-time annotations, not historical execution."""
         return SKILL_ONTOLOGY_VERSION
+
+    @computed_field
+    @property
+    def skill_coverage(self) -> SkillCoverage | None:
+        if self.status != "completed":
+            return None
+        return calculate_coverage(self.tool_trace, str(self.job_id), str(self.profile_id))

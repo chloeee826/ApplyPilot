@@ -45,3 +45,29 @@ loopback URLs and only creates deterministic demo runs.
 The CI workflow has not run remotely because these changes have not been pushed.
 Phase 30 real OpenAI verification remains deferred pending API spending approval.
 No successful live-model, public deployment, or real-user outcome claim is added.
+
+## October 14 follow-up — evidence scoring and guided UX
+
+- Added `coverage-v1`: unique extracted technical skills with saved profile/project
+  support divided by unique extracted skills. Source snapshots, role identity,
+  JD excerpts, empty-score states and stale warnings are shown. This is not hiring
+  probability, proficiency, or overall qualification.
+- Home now guides resume review → target JD → saved report. The main action uses
+  deterministic parsing/matching only; OpenAI remains an explicit advanced mode.
+- `/fit-checks` saves job, application, analysis and report in one transaction.
+  Tests cover retry reuse, changed-input/evidence conflicts, missing profiles and
+  rollback after a synthetic mid-transaction failure.
+- Backend: 112 passed with real local PostgreSQL integration enabled; one existing
+  dependency deprecation warning. Frontend build and lint passed.
+- Six sequential Chromium journeys passed, including the guided PDF review to
+  result flow, reload persistence, 102-job pagination, errors and 390px mobile.
+  Inspected the mobile result screenshot; no horizontal overflow was detected.
+- Re-ran parser and deterministic matcher evaluations. Historical numbers above
+  were reproduced; v4's 97.50% recall is still validation performance, not blind
+  or live-OpenAI accuracy.
+- Rebuilt the local Compose product and retrieved the existing PostgreSQL-backed
+  report successfully. The new derived coverage field changes the serialized
+  report digest, so the earlier release digest must not be reused for comparisons
+  across this scoring change. No new across-restart digest claim is made here.
+- No paid API call, new public deployment, or real-user outcome was verified.
+  User approved the Lark update and Git publication after reviewing these results.

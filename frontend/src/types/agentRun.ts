@@ -13,6 +13,18 @@ export interface AgentRunCreate {
   mode?: 'openai' | 'demo'
 }
 
+export interface SkillCoverage {
+  version: string
+  role_title: string
+  company_name: string
+  candidate_name: string
+  supported_count: number
+  total_count: number
+  percentage: number | null
+  supported: NonNullable<AgentRun['matched_skill_evidence']>
+  gaps: { skill: string; excerpts: string[] }[]
+}
+
 export interface AgentRun {
   id: string
   job_id: string
@@ -43,4 +55,5 @@ export interface AgentRun {
   completed_at: string | null
   context_status?: 'unchanged' | 'changed' | 'unavailable'
   changed_sources?: string[]
+  skill_coverage?: SkillCoverage | null
 }

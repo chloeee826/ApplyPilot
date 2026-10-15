@@ -34,6 +34,7 @@ interface ProjectForm {
 interface CandidateProfilePanelProps {
   onProfileSaved?: (profile: CandidateProfile) => void
   onEvidenceChanged?: () => void
+  guided?: boolean
 }
 
 const emptyProfileForm: ProfileForm = {
@@ -82,7 +83,8 @@ function projectToForm(project: CandidateProjectCreate): ProjectForm {
   }
 }
 
-export function CandidateProfilePanel({ onProfileSaved, onEvidenceChanged }: CandidateProfilePanelProps) {
+export function CandidateProfilePanel({ onProfileSaved, onEvidenceChanged, guided = false }: CandidateProfilePanelProps) {
+  const [manualReviewOpen, setManualReviewOpen] = useState(false)
   const [profile, setProfile] = useState<CandidateProfile | null>(null)
   const [projects, setProjects] = useState<CandidateProject[]>([])
   const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfileForm)
@@ -320,7 +322,10 @@ export function CandidateProfilePanel({ onProfileSaved, onEvidenceChanged }: Can
       {error && <p className="error-message">{error}</p>}
       {notice && <p className="success-message">{notice}</p>}
 
-      {showProfileForm && (
+      {guided && !profile && !resumeExtraction && !manualReviewOpen && (
+        <button className="text-button" type="button" onClick={() => setManualReviewOpen(true)}>Enter details manually instead</button>
+      )}
+      {showProfileForm && (!guided || resumeExtraction || isEditingProfile || manualReviewOpen) && (
         <form className="profile-form review-form" onSubmit={handleProfileSubmit}>
           <div className="review-heading">
             <div>
@@ -402,10 +407,11 @@ export function CandidateProfilePanel({ onProfileSaved, onEvidenceChanged }: Can
             />
           </label>
           {resumeExtraction && (
-            <section
+            <details open={!guided || undefined}
               className="imported-project-review"
               aria-labelledby="project-drafts-heading"
             >
+              <summary>Review extracted projects ({resumeProjectForms.length})</summary>
               <div className="project-review-heading">
                 <div>
                   <p className="profile-label">Project evidence draft</p>
@@ -506,7 +512,7 @@ export function CandidateProfilePanel({ onProfileSaved, onEvidenceChanged }: Can
                   </label>
                 </fieldset>
               ))}
-            </section>
+            </details>
           )}
           <div className="form-actions">
             <button className="primary-button" disabled={isSubmitting} type="submit">
@@ -550,7 +556,7 @@ export function CandidateProfilePanel({ onProfileSaved, onEvidenceChanged }: Can
               </div>
             </article>
 
-            <form className="project-form" onSubmit={handleProjectSubmit}>
+            {!guided && <form className="project-form" onSubmit={handleProjectSubmit}>
               <h3>Add project evidence</h3>
               <label>
                 Project name
@@ -615,7 +621,7 @@ export function CandidateProfilePanel({ onProfileSaved, onEvidenceChanged }: Can
               <button className="primary-button" disabled={isSubmitting} type="submit">
                 {isSubmitting ? 'Saving…' : 'Add project'}
               </button>
-            </form>
+            </form>}
           </div>
 
           <div className="project-evidence-list">

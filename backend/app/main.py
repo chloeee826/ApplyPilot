@@ -14,11 +14,12 @@ from app.routers.applications import router as applications_router
 from app.routers.candidate_imports import router as candidate_imports_router
 from app.routers.job_analyses import router as job_analyses_router
 from app.routers.jobs import router as jobs_router
+from app.routers.fit_checks import router as fit_checks_router
 from app.routers.profiles import router as profiles_router
 from app.routers.resume_extractions import router as resume_extractions_router
 
 
-CLIENT_ROUTES = {"", "jobs", "candidate", "agent"}
+CLIENT_ROUTES = {"", "jobs", "candidate", "agent", "overview"}
 DEFAULT_FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 
@@ -47,6 +48,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
     application.include_router(agent_runs_router, prefix=api_prefix)
     application.include_router(resume_extractions_router, prefix=api_prefix)
     application.include_router(candidate_imports_router, prefix=api_prefix)
+    application.include_router(fit_checks_router, prefix=api_prefix)
 
     @application.get("/health")
     def health_check() -> dict[str, str]:
