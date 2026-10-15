@@ -27,3 +27,5 @@ def get_db() -> Generator[Session, None, None]:
 def create_db_and_tables() -> None:
     """Create tables that do not yet exist in the configured database."""
     Base.metadata.create_all(bind=engine)
+    from app.migrations import upgrade_ownership
+    upgrade_ownership(engine)

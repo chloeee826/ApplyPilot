@@ -13,6 +13,7 @@ class CandidateProfile(Base):
     __tablename__ = "candidate_profiles"
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    owner_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id"), index=True)
     full_name: Mapped[str] = mapped_column(String(120))
     headline: Mapped[str | None] = mapped_column(String(160), nullable=True)
     summary: Mapped[str] = mapped_column(Text)

@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security import current_owner, owned
 from app.models.job import Job
 from app.models.job_analysis import JobAnalysis
 from app.schemas.job_analysis import JobAnalysisRead
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/job-analyses", tags=["job analyses"])
 
 
 def get_job_or_404(db: Session, job_id: UUID) -> Job:
-    job = db.get(Job, job_id)
+    job = owned(db, Job, job_id)
     if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -33,6 +34,7 @@ def list_job_analyses(
 ) -> list[JobAnalysis]:
     statement = (
         select(JobAnalysis)
+        .join(Job).where(Job.owner_id == current_owner(db))
         .order_by(JobAnalysis.updated_at.desc(), JobAnalysis.id)
         .offset(offset)
         .limit(limit)

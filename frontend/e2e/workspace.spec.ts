@@ -1,4 +1,21 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test as base, request as apiRequest, type Page } from '@playwright/test'
+
+// Browser and API actions share the same authenticated cookie jar.
+const test = base.extend({ request: async ({ context }, provide) => { await provide(context.request) } })
+const credentials = { email: 'browser-journey@example.test', password: 'synthetic-browser-password-42' }
+
+test.beforeAll(async () => {
+  const setup = await apiRequest.newContext({ baseURL: 'http://127.0.0.1:5181' })
+  const response = await setup.post('/api/auth/register', { data: credentials, headers: { 'X-ApplyPilot-Request': '1' } })
+  expect(response.status()).toBe(201)
+  await setup.dispose()
+})
+
+test.beforeEach(async ({ context }) => {
+  await context.setExtraHTTPHeaders({ 'X-ApplyPilot-Request': '1' })
+  const login = await context.request.post('/api/auth/login', { data: credentials })
+  expect(login.status()).toBe(200)
+})
 
 // These steps share the isolated workspace created by the first journey test.
 test.describe.configure({ mode: 'serial' })

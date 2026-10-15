@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security import current_owner, owned
 from app.models.candidate import CandidateProfile, CandidateProject
 from app.schemas.candidate import (
     CandidateProfileCreate,
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 
 def get_profile_or_404(db: Session, profile_id: UUID) -> CandidateProfile:
-    profile = db.get(CandidateProfile, profile_id)
+    profile = owned(db, CandidateProfile, profile_id)
     if profile is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -34,7 +35,7 @@ def create_profile(
     profile: CandidateProfileCreate,
     db: Annotated[Session, Depends(get_db)],
 ) -> CandidateProfile:
-    record = CandidateProfile(**profile.model_dump())
+    record = CandidateProfile(owner_id=current_owner(db), **profile.model_dump())
     db.add(record)
     db.commit()
     db.refresh(record)
@@ -49,6 +50,7 @@ def list_profiles(
 ) -> list[CandidateProfile]:
     statement = (
         select(CandidateProfile)
+        .where(CandidateProfile.owner_id == current_owner(db))
         .order_by(CandidateProfile.created_at.desc(), CandidateProfile.id)
         .offset(offset)
         .limit(limit)

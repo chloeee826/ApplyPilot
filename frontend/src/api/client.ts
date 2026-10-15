@@ -1,3 +1,15 @@
+export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(options.headers)
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(options.method?.toUpperCase() ?? 'GET')) {
+    headers.set('X-ApplyPilot-Request', '1')
+  }
+  const response = await fetch(path, { ...options, headers, credentials: 'same-origin' })
+  if (response.status === 401 && !path.startsWith('/api/auth/')) {
+    window.dispatchEvent(new Event('applypilot-session-expired'))
+  }
+  return response
+}
+
 export async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => null)
@@ -19,7 +31,7 @@ export async function listAllPages<T extends { id: string }>(path: string): Prom
   const records = new Map<string, T>()
   const pageSize = 100
   for (let offset = 0; ; offset += pageSize) {
-    const response = await fetch(`${path}?limit=${pageSize}&offset=${offset}`)
+    const response = await apiFetch(`${path}?limit=${pageSize}&offset=${offset}`)
     const page = await parseResponse<T[]>(response)
     const previousCount = records.size
     for (const item of page) records.set(item.id, item)

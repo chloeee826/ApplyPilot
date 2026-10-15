@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security import current_owner, owned
 from app.models.agent_run import AgentRun
 from app.models.application import Application
 from app.models.candidate import CandidateProfile
@@ -42,14 +43,15 @@ class FitCheckRead(BaseModel):
 
 @router.post("", response_model=FitCheckRead)
 def check_fit(request: FitCheckCreate, db: Annotated[Session, Depends(get_db)]) -> FitCheckRead:
-    if db.get(CandidateProfile, request.profile_id) is None:
+    if owned(db, CandidateProfile, request.profile_id) is None:
         raise HTTPException(404, "Save a reviewed candidate profile first.")
     values = request.job.model_dump(mode="json")
     job = db.get(Job, request.request_id)
     if job is not None:
+        owned(db, Job, job.id)
         if any(getattr(job, key) != value for key, value in values.items()):
             raise HTTPException(409, "This check has different inputs. Start a new check.")
-        record = db.scalar(select(AgentRun).where(AgentRun.job_id == job.id))
+        record = db.scalar(select(AgentRun).where(AgentRun.job_id == job.id).order_by(AgentRun.created_at, AgentRun.id))
         application = db.scalar(select(Application).where(Application.job_id == job.id))
         analysis = db.scalar(select(JobAnalysis).where(JobAnalysis.job_id == job.id))
         if record is None or application is None or analysis is None or record.profile_id != request.profile_id:
@@ -62,7 +64,7 @@ def check_fit(request: FitCheckCreate, db: Annotated[Session, Depends(get_db)]) 
     # One transaction: a failed check leaves no partial job/application/report.
     # The client-generated job UUID makes response-loss retries idempotent.
     try:
-        job = Job(id=request.request_id, **values)
+        job = Job(id=request.request_id, owner_id=current_owner(db), **values)
         db.add(job)
         db.flush()
         application = Application(job_id=job.id, status="saved")

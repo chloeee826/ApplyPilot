@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security import current_owner, owned
 from app.models.candidate import CandidateProfile, CandidateProject
 from app.schemas.resume import CandidateImportCreate, CandidateImportRead
 
@@ -20,11 +21,11 @@ def save_candidate_import(
 ) -> CandidateImportRead:
     """Persist a reviewed profile and its projects in one transaction."""
     if candidate_import.profile_id is None:
-        profile = CandidateProfile(**candidate_import.profile.model_dump())
+        profile = CandidateProfile(owner_id=current_owner(db), **candidate_import.profile.model_dump())
         db.add(profile)
         db.flush()
     else:
-        profile = db.get(CandidateProfile, candidate_import.profile_id)
+        profile = owned(db, CandidateProfile, candidate_import.profile_id)
         if profile is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

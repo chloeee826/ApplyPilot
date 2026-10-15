@@ -11,14 +11,20 @@ From the repository root with Docker Desktop running:
 
 ```bash
 docker compose up --build -d
-docker compose exec app python -m scripts.seed_demo
 ```
 
-Open http://127.0.0.1:8008. The single app container serves React and `/api/*`.
+Open http://127.0.0.1:8008 and create an account. Optionally seed synthetic evidence:
+`docker compose exec app python -m scripts.seed_demo --email YOUR_EMAIL`.
+The single app container serves React and `/api/*`.
 PostgreSQL is a separate container with a named volume. The database port `5544`
 and application port `8008` are bound to `127.0.0.1`. Neither environment receives
 an OpenAI key by default. Seeding is idempotent and updates the named demo records,
 so do not edit the demo records expecting seeding to preserve those edits.
+
+Existing pre-auth records remain stored but hidden. See the explicit local
+ownership-assignment steps in [authentication](authentication.md); first signup
+never claims them automatically. Use a unique password: email verification and
+password recovery are not implemented in this MVP.
 
 Stop using `docker compose down`; data stays in the named volume. If the default
 Docker Compose command is missing on macOS, Docker Desktop's bundled binary is
@@ -89,7 +95,8 @@ Run that command only against the local Compose demo database. The opt-in test
 creates and removes its own records. SQLite browser tests do not by themselves
 prove PostgreSQL persistence or container-restart behavior.
 
-From `backend`, `python -m scripts.verify_runtime` checks production page routes,
+From `backend`, `python -m scripts.verify_runtime --email YOUR_EMAIL` prompts for
+the demo account password without echoing it, signs in, checks production page routes,
 creates one demo report, reads its sources, and prints a run ID and digest. After
 `docker compose restart app` and a healthy status, re-run it with `--run-id ID`
 and `--expected-digest HASH` to verify unchanged report content. Use only the
@@ -123,12 +130,13 @@ The OpenAI bounded tool loop is implemented and fake-client-tested. Successful
 live execution, live-model latency/token usage, production traffic, and real-user
 outcomes remain unverified. Phase 30 waits for explicit API spending approval.
 
-This is a local single-user portfolio MVP. It lacks authentication and tenant
-isolation; do not publish a real resume workspace as a public service. OCR, DOCX,
+This local portfolio MVP now has accounts and application-level user isolation;
+it is not an audited production identity service. Do not publish real resumes
+without the operational and security review described in [authentication](authentication.md). OCR, DOCX,
 live job discovery, automatic applications, and iOS are outside this release.
 The frontend loads all API pages into shared memory and filters locally; offset
 pagination can shift during concurrent writes. A larger/multi-user version needs
-server-side query/filtering, stable cursors, authentication, and schema migrations.
+server-side query/filtering, stable cursors and a broader migration process.
 
 ## Interview explanation
 

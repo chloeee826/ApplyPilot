@@ -3,14 +3,20 @@
 import argparse
 import hashlib
 import json
+import os
+from getpass import getpass
+from http.cookiejar import CookieJar
+from urllib.request import HTTPCookieProcessor, build_opener
 from urllib.request import Request, urlopen
+
+CLIENT = build_opener(HTTPCookieProcessor(CookieJar()))
 
 
 def request(base_url: str, path: str, data: dict | None = None):
     payload = json.dumps(data).encode() if data is not None else None
-    with urlopen(Request(
+    with CLIENT.open(Request(
         base_url + path, data=payload,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "X-ApplyPilot-Request": "1"},
     ), timeout=30) as response:
         return json.load(response)
 
@@ -20,11 +26,14 @@ def main() -> None:
     parser.add_argument("--url", default="http://127.0.0.1:8008")
     parser.add_argument("--run-id", help="Read an existing run instead of creating one")
     parser.add_argument("--expected-digest", help="Compare the persisted report content")
+    parser.add_argument("--email", required=True, help="Existing demo workspace account")
     args = parser.parse_args()
     if not args.url.startswith(("http://127.0.0.1:", "http://localhost:")):
         parser.error("This verification script is restricted to local test workspaces")
 
     assert request(args.url, "/health") == {"status": "ok"}
+    password = os.getenv("APPLYPILOT_VERIFY_PASSWORD") or getpass("Demo account password (not echoed): ")
+    request(args.url, "/api/auth/login", {"email": args.email, "password": password})
     for page in ("/", "/jobs", "/candidate", "/agent"):
         with urlopen(args.url + page, timeout=10) as response:
             assert b'<div id="root">' in response.read()
@@ -52,6 +61,9 @@ def main() -> None:
         assert digest == args.expected_digest, "Report changed across container restart"
     print(json.dumps({"run_id": run["id"], "job_id": run["job_id"],
         "report_sha256": digest, "status": "verified"}))
+    request_logout = Request(args.url + "/api/auth/logout", method="POST", headers={"X-ApplyPilot-Request": "1"})
+    with CLIENT.open(request_logout, timeout=10) as response:
+        assert response.status == 204
 
 
 if __name__ == "__main__":

@@ -71,3 +71,33 @@ No successful live-model, public deployment, or real-user outcome claim is added
   across this scoring change. No new across-restart digest claim is made here.
 - No paid API call, new public deployment, or real-user outcome was verified.
   User approved the Lark update and Git publication after reviewing these results.
+
+## October 14 follow-up — authentication and authorization
+
+- Checked the actual push-triggered [GitHub Actions run for 1b1e9d2](https://github.com/chloeee826/ApplyPilot/actions/runs/38670842846).
+  Backend tests and build/lint succeeded; Chromium failed the 390px horizontal
+  overflow assertion in Reports. Added shrinkable grid/flex children and wrapping;
+  the local assertion passes. A new Linux remote run is still needed after push.
+- Added local email/password accounts, Argon2id hashes, hash-only database sessions,
+  eight-hour expiry, rotation/logout revocation, HttpOnly cookies and secure-by-default
+  transport. Loopback-only HTTP development explicitly opts out of Secure cookies.
+- All business routes now require authentication. Jobs/profiles are owner-bound;
+  child records and reports are owner-filtered before pagination. Cross-owner
+  references, imports, writes and agent tool reads are denied.
+- Added same-origin custom-header write protection (including auth and multipart
+  uploads), Origin/Fetch-Metadata checks, no-store private responses, redacted auth
+  validation errors, and database-backed account/IP attempt throttles.
+- Existing databases receive additive nullable ownership columns/indexes. Legacy
+  records remain stored but hidden; assignment requires a chosen existing account
+  and explicit local operator confirmation. Seeding is scoped to a chosen account.
+- Full backend verification: 132 passed including real PostgreSQL authentication,
+  session persistence and cross-user filtering; one existing dependency warning.
+- Frontend build/lint passed. Seven Chromium journeys passed, including real signup,
+  reload, logout/account-switch isolation and the existing PDF-to-report workflow.
+- Rebuilt the local Docker product; both services healthy. Health returns 200 and
+  unauthenticated `/api/jobs` returns 401. Inspected the production login screen.
+- No paid API request or real-user credential was used for verification. No account
+  was created for the human user and legacy data was not assigned automatically.
+- Not implemented: verified email, password recovery/change, MFA, administrator roles,
+  public deployment or an audited production identity service. See authentication.md.
+- User approved the Lark update, commit and push after reviewing this phase.

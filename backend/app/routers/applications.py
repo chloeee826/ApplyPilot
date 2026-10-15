@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security import current_owner, owned
 from app.models.application import Application
 from app.models.job import Job
 from app.schemas.application import (
@@ -19,7 +20,8 @@ router = APIRouter(prefix="/applications", tags=["applications"])
 
 
 def get_application_or_404(db: Session, application_id: UUID) -> Application:
-    application = db.get(Application, application_id)
+    application = db.scalar(select(Application).join(Job).where(
+        Application.id == application_id, Job.owner_id == current_owner(db)))
     if application is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -33,7 +35,7 @@ def create_application(
     application: ApplicationCreate,
     db: Annotated[Session, Depends(get_db)],
 ) -> Application:
-    if db.get(Job, application.job_id) is None:
+    if owned(db, Job, application.job_id) is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Job not found",
@@ -66,6 +68,7 @@ def list_applications(
 ) -> list[Application]:
     statement = (
         select(Application)
+        .join(Job).where(Job.owner_id == current_owner(db))
         .order_by(Application.updated_at.desc(), Application.id)
         .offset(offset)
         .limit(limit)

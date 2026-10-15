@@ -1,12 +1,12 @@
 import type { AgentRun, AgentRunCreate } from '../types/agentRun'
-import { listAllPages, parseResponse } from './client'
+import { apiFetch, listAllPages, parseResponse } from './client'
 
 export async function listAgentRuns(): Promise<AgentRun[]> {
   return listAllPages<AgentRun>('/api/agent-runs')
 }
 
 export async function createAgentRun(request: AgentRunCreate): Promise<AgentRun> {
-  const response = await fetch('/api/agent-runs', {
+  const response = await apiFetch('/api/agent-runs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),

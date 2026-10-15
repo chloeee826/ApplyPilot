@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import argparse
 from uuid import UUID
 
 from sqlalchemy import select
@@ -9,6 +10,7 @@ from app.models.application import Application
 from app.models.candidate import CandidateProfile, CandidateProject
 from app.models.job import Job
 from app.models.job_analysis import JobAnalysis
+from app.models.user import User
 from app.services.job_parser import PARSER_VERSION, parse_job_description
 
 
@@ -31,16 +33,18 @@ class SeedResult:
     analysis_id: UUID
 
 
-def seed_demo_data(db: Session) -> SeedResult:
+def seed_demo_data(db: Session, owner_id: UUID | None = None) -> SeedResult:
     """Create or refresh one complete, repeatable local demo workspace."""
     job = db.scalar(
         select(Job).where(
             Job.company_name == DEMO_COMPANY,
             Job.title == DEMO_ROLE,
+            Job.owner_id == owner_id,
         )
     )
     if job is None:
         job = Job(
+            owner_id=owner_id,
             company_name=DEMO_COMPANY,
             title=DEMO_ROLE,
             description=DEMO_JOB_DESCRIPTION,
@@ -76,7 +80,8 @@ def seed_demo_data(db: Session) -> SeedResult:
 
     profile = db.scalar(
         select(CandidateProfile).where(
-            CandidateProfile.full_name == DEMO_PROFILE_NAME
+            CandidateProfile.full_name == DEMO_PROFILE_NAME,
+            CandidateProfile.owner_id == owner_id,
         )
     )
     profile_values = {
@@ -96,7 +101,7 @@ def seed_demo_data(db: Session) -> SeedResult:
         ],
     }
     if profile is None:
-        profile = CandidateProfile(full_name=DEMO_PROFILE_NAME, **profile_values)
+        profile = CandidateProfile(owner_id=owner_id, full_name=DEMO_PROFILE_NAME, **profile_values)
         db.add(profile)
         db.flush()
     else:
@@ -153,14 +158,20 @@ def seed_demo_data(db: Session) -> SeedResult:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Seed synthetic evidence for one existing account")
+    parser.add_argument("--email", required=True)
+    args = parser.parse_args()
     create_db_and_tables()
     with SessionLocal() as session:
-        result = seed_demo_data(session)
+        user = session.scalar(select(User).where(User.email == args.email.strip().casefold()))
+        if user is None:
+            parser.error("Register the intended account first")
+        result = seed_demo_data(session, user.id)
 
     print("ApplyPilot demo data is ready.")
     print(f"job_id={result.job_id}")
     print(f"profile_id={result.profile_id}")
-    print("Next: open /agent at your running frontend URL and run Deterministic demo.")
+    print("Next: sign in to the same account and open Check fit.")
 
 
 if __name__ == "__main__":

@@ -101,6 +101,12 @@ def _execute_tool(
     job_id: UUID,
     profile_id: UUID,
 ) -> dict[str, object]:
+    if "owner_id" in db.info:
+        # HTTP executions are owner-bound before any tool reads or model call.
+        # Offline evaluation sessions contain only their curated fixtures.
+        from app.security import owned
+        owned(db, Job, job_id)
+        owned(db, CandidateProfile, profile_id)
     if name == "get_job":
         job = db.get(Job, job_id)
         if job is None:

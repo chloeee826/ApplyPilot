@@ -1553,6 +1553,8 @@ select:focus {
   color: var(--ink);
   background: var(--surface);
   text-align: left;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .run-history button:hover,
@@ -1562,12 +1564,26 @@ select:focus {
 }
 
 .run-history button span {
+  min-width: 0;
   overflow: hidden;
   font-size: 0.76rem;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Grid children must shrink below their min-content width across OS fonts. */
+.agent-layout > *, .agent-output, .agent-result-card, .run-history,
+.run-history > div, .agent-result-grid > * { min-width: 0; }
+.evidence-snapshot, .agent-result-heading, .report-technical-details { overflow-wrap: anywhere; }
+
+.auth-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.auth-card { width: min(100%, 480px); background: var(--cream); border: 1px solid var(--blue); border-radius: 20px; padding: 32px; }
+.auth-card h1 { font-size: 2.3rem; margin-bottom: 16px; }
+.auth-card form { display: grid; gap: 16px; margin: 24px 0 16px; }
+.auth-card .muted { color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+.account-bar { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 12px; padding: 8px 20px; background: var(--cream); font-size: 0.8rem; overflow-wrap: anywhere; }
+.account-bar button { background: var(--sage); border: 1px solid var(--blue); padding: 5px 12px; border-radius: 8px; }
 
 .run-history button small {
   color: var(--muted);

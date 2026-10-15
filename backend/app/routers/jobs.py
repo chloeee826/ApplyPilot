@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security import current_owner, owned
 from app.models.application import Application
 from app.models.job import Job
 from app.models.job_analysis import JobAnalysis
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 def get_job_or_404(db: Session, job_id: UUID) -> Job:
     """Return a job or raise a consistent not-found response."""
-    job = db.get(Job, job_id)
+    job = owned(db, Job, job_id)
     if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -32,7 +33,7 @@ def create_job(
     db: Annotated[Session, Depends(get_db)],
 ) -> Job:
     """Validate and persist a job in the configured database."""
-    job_record = Job(**job.model_dump(mode="json"))
+    job_record = Job(owner_id=current_owner(db), **job.model_dump(mode="json"))
     db.add(job_record)
     db.flush()
     db.add(Application(job_id=job_record.id, status="saved"))
@@ -50,6 +51,7 @@ def list_jobs(
     """Return jobs newest first with bounded pagination."""
     statement = (
         select(Job)
+        .where(Job.owner_id == current_owner(db))
         .order_by(Job.created_at.desc(), Job.id)
         .offset(offset)
         .limit(limit)

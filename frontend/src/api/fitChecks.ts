@@ -1,4 +1,4 @@
-import { parseResponse } from './client'
+import { apiFetch, parseResponse } from './client'
 import type { AgentRun } from '../types/agentRun'
 import type { Application } from '../types/application'
 import type { Job, JobCreate } from '../types/job'
@@ -12,7 +12,7 @@ export interface FitCheckResult {
 }
 
 export async function checkFit(requestId: string, profileId: string, job: JobCreate): Promise<FitCheckResult> {
-  return parseResponse<FitCheckResult>(await fetch('/api/fit-checks', {
+  return parseResponse<FitCheckResult>(await apiFetch('/api/fit-checks', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ request_id: requestId, profile_id: profileId, job }),
   }))

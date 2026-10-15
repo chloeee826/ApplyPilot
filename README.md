@@ -10,10 +10,13 @@ With Docker Desktop running, from the repository root:
 
 ```bash
 docker compose up --build -d
-docker compose exec app python -m scripts.seed_demo
 ```
 
-Open **http://127.0.0.1:8008**. This is the complete product, not just the API.
+Open **http://127.0.0.1:8008** and create an account. This is the complete product,
+not just the API. To seed synthetic evidence into that account, run
+`docker compose exec app python -m scripts.seed_demo --email YOUR_EMAIL`.
+Existing pre-authentication data is preserved but hidden until a local operator
+explicitly assigns it; see [authentication and legacy upgrade](docs/authentication.md).
 The Compose database uses a named volume and loopback-only ports. Demo mode has
 zero model API cost. `docker compose down` stops this workspace while preserving
 its volume. Do not use `down -v` if you want to keep your records. These are local
@@ -25,6 +28,11 @@ verification commands, known limitations, and interview explanations.
 ## Current status
 
 The repository currently contains a tested full-stack foundation with:
+
+- email/password registration and login, Argon2id password hashing, revocable
+  eight-hour HttpOnly cookie sessions, CSRF request protection and login throttling;
+- owner-filtered workspace reads/writes, including cross-user report/tool isolation,
+  plus additive legacy upgrades and explicit operator-only data assignment;
 
 - a FastAPI `GET /health` liveness endpoint;
 - a validated `POST /jobs` endpoint;
@@ -106,7 +114,8 @@ stored application data only; live job search is not implemented.
 No OpenAI key is required for this path:
 
 1. Start PostgreSQL, the backend, and the frontend using the commands below.
-2. From the `backend` directory, run `python -m scripts.seed_demo`. The command is
+2. Create an account in the frontend, then from `backend` run
+   `python -m scripts.seed_demo --email YOUR_EMAIL`. The command is
    idempotent, so running it again refreshes the same demo records instead of
    creating duplicates.
 3. Open `http://127.0.0.1:5173`. Choose the saved profile or upload a text-based PDF

@@ -6,7 +6,7 @@ import type {
   CandidateProjectCreate,
   ResumeExtraction,
 } from '../types/candidate'
-import { listAllPages, parseResponse } from './client'
+import { apiFetch, listAllPages, parseResponse } from './client'
 
 export async function listProfiles(): Promise<CandidateProfile[]> {
   return listAllPages<CandidateProfile>('/api/profiles')
@@ -15,7 +15,7 @@ export async function listProfiles(): Promise<CandidateProfile[]> {
 export async function createProfile(
   profile: CandidateProfileCreate,
 ): Promise<CandidateProfile> {
-  const response = await fetch('/api/profiles', {
+  const response = await apiFetch('/api/profiles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(profile),
@@ -27,7 +27,7 @@ export async function updateProfile(
   profileId: string,
   profile: CandidateProfileCreate,
 ): Promise<CandidateProfile> {
-  const response = await fetch(`/api/profiles/${profileId}`, {
+  const response = await apiFetch(`/api/profiles/${profileId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(profile),
@@ -39,7 +39,7 @@ export async function extractResume(resume: File): Promise<ResumeExtraction> {
   const formData = new FormData()
   formData.append('resume', resume)
 
-  const response = await fetch('/api/resume-extractions', {
+  const response = await apiFetch('/api/resume-extractions', {
     method: 'POST',
     body: formData,
   })
@@ -51,7 +51,7 @@ export async function saveCandidateImport(
   projects: CandidateProjectCreate[],
   profileId?: string,
 ): Promise<CandidateImportResult> {
-  const response = await fetch('/api/candidate-imports', {
+  const response = await apiFetch('/api/candidate-imports', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -64,7 +64,7 @@ export async function saveCandidateImport(
 }
 
 export async function listProjects(profileId: string): Promise<CandidateProject[]> {
-  const response = await fetch(`/api/profiles/${profileId}/projects`)
+  const response = await apiFetch(`/api/profiles/${profileId}/projects`)
   return parseResponse<CandidateProject[]>(response)
 }
 
@@ -72,7 +72,7 @@ export async function createProject(
   profileId: string,
   project: CandidateProjectCreate,
 ): Promise<CandidateProject> {
-  const response = await fetch(`/api/profiles/${profileId}/projects`, {
+  const response = await apiFetch(`/api/profiles/${profileId}/projects`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(project),

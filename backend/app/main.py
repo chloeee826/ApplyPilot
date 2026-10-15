@@ -3,12 +3,16 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import models  # noqa: F401 -- registers database models with SQLAlchemy
 from app.database import create_db_and_tables
+from app.security import get_workspace_db
+from app.routers.auth import router as auth_router
 from app.routers.agent_runs import router as agent_runs_router
 from app.routers.applications import router as applications_router
 from app.routers.candidate_imports import router as candidate_imports_router
@@ -41,14 +45,28 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
     """Create the API, optionally serving a compiled React application."""
     application = FastAPI(title="ApplyPilot API", lifespan=lifespan)
     api_prefix = "/api" if frontend_dist is not None else ""
-    application.include_router(jobs_router, prefix=api_prefix)
-    application.include_router(applications_router, prefix=api_prefix)
-    application.include_router(profiles_router, prefix=api_prefix)
-    application.include_router(job_analyses_router, prefix=api_prefix)
-    application.include_router(agent_runs_router, prefix=api_prefix)
-    application.include_router(resume_extractions_router, prefix=api_prefix)
-    application.include_router(candidate_imports_router, prefix=api_prefix)
-    application.include_router(fit_checks_router, prefix=api_prefix)
+
+    @application.exception_handler(RequestValidationError)
+    async def validation_error(request, exc):
+        if request.url.path.startswith(f"{api_prefix}/auth/"):
+            # Do not reflect passwords into validation-error payloads/client logs.
+            errors = [{key: value for key, value in item.items() if key not in {"input", "ctx"}}
+                      for item in exc.errors()]
+            return JSONResponse(status_code=422, content={"detail": errors})
+        return await request_validation_exception_handler(request, exc)
+    application.include_router(auth_router, prefix=api_prefix)
+    for router in (jobs_router, applications_router, profiles_router, job_analyses_router,
+                   agent_runs_router, resume_extractions_router, candidate_imports_router, fit_checks_router):
+        application.include_router(router, prefix=api_prefix, dependencies=[Depends(get_workspace_db)])
+
+    @application.middleware("http")
+    async def private_responses(request, call_next):
+        response = await call_next(request)
+        if not request.url.path.startswith("/assets/"):
+            response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "same-origin"
+        return response
 
     @application.get("/health")
     def health_check() -> dict[str, str]:

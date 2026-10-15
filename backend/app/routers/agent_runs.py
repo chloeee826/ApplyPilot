@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security import current_owner, owned
 from app.models.agent_run import AgentRun
 from app.models.candidate import CandidateProfile
 from app.models.job import Job
@@ -67,9 +68,9 @@ def create_agent_run(
     db: Annotated[Session, Depends(get_db)],
     runner: Annotated[AgentRunner, Depends(get_agent_runner)],
 ) -> AgentRunRead:
-    if db.get(Job, request.job_id) is None:
+    if owned(db, Job, request.job_id) is None:
         raise HTTPException(status_code=404, detail="Job not found")
-    if db.get(CandidateProfile, request.profile_id) is None:
+    if owned(db, CandidateProfile, request.profile_id) is None:
         raise HTTPException(status_code=404, detail="Candidate profile not found")
     analysis = db.scalar(
         select(JobAnalysis).where(JobAnalysis.job_id == request.job_id)
@@ -134,6 +135,8 @@ def list_agent_runs(
 ) -> list[AgentRunRead]:
     statement = (
         select(AgentRun)
+        .join(Job).join(CandidateProfile, CandidateProfile.id == AgentRun.profile_id)
+        .where(Job.owner_id == current_owner(db), CandidateProfile.owner_id == current_owner(db))
         .order_by(AgentRun.created_at.desc(), AgentRun.id)
         .offset(offset)
         .limit(limit)
@@ -147,7 +150,9 @@ def get_agent_run(
     run_id: UUID,
     db: Annotated[Session, Depends(get_db)],
 ) -> AgentRunRead:
-    record = db.get(AgentRun, run_id)
+    record = db.scalar(select(AgentRun).join(Job)
+        .join(CandidateProfile, CandidateProfile.id == AgentRun.profile_id)
+        .where(AgentRun.id == run_id, Job.owner_id == current_owner(db), CandidateProfile.owner_id == current_owner(db)))
     if record is None:
         raise HTTPException(status_code=404, detail="Agent run not found")
     return read_run(db, record)
